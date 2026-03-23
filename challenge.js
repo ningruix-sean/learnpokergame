@@ -3,16 +3,26 @@
 const CHALLENGE_STORAGE_KEY = 'poker_challenge_progress';
 const TOTAL_LEVELS = 100;
 
+// 牌桌位置名（按顺序排列）
+const POSITION_NAMES = ['BTN', 'SB', 'BB', 'UTG', 'UTG+1', 'MP', 'MP+1', 'HJ', 'CO'];
+const POSITION_FULL_NAMES = {
+    BTN: '庄家', SB: '小盲', BB: '大盲', UTG: '枪口',
+    'UTG+1': '枪口+1', MP: '中位', 'MP+1': '中位+1', HJ: '劫持位', CO: '关煞位'
+};
+
 // 闯关状态
 let challengeState = {
     currentLevel: 1,
     score: 0,
-    completed: [],   // [{level, correct, playerAnswer, correctAnswer}]
+    completed: [],
     // 当前关卡
     handCards: [],
     communityCards: [],
+    fullCommunity: [],  // 完整的5张公牌（用于翻牌后揭晓）
     stage: '',
     numPlayers: 2,
+    playerPosition: '',
+    opponents: [],      // [{position, cards: [c1, c2], handType}]
     correctWinRate: 0,
     options: [],
     answered: false,
@@ -53,32 +63,25 @@ function resetChallengeProgress() {
 
 // 根据关卡难度决定参数
 function getLevelConfig(level) {
-    // 难度递增：前面关卡选项差距大，后面差距小
-    // 阶段分布也随难度变化
     let stages, playerRange, optionSpread;
 
     if (level <= 20) {
-        // 入门：翻牌前为主，选项差距大
         stages = ['preflop', 'preflop', 'flop', 'flop', 'preflop'];
         playerRange = [2, 4];
-        optionSpread = 20; // 选项间距大
+        optionSpread = 20;
     } else if (level <= 40) {
-        // 初级：混合阶段
         stages = ['preflop', 'flop', 'flop', 'turn'];
         playerRange = [2, 6];
         optionSpread = 15;
     } else if (level <= 60) {
-        // 中级：更多翻牌后
         stages = ['flop', 'turn', 'turn', 'river'];
         playerRange = [3, 6];
         optionSpread = 12;
     } else if (level <= 80) {
-        // 高级：河牌为主，选项差距小
         stages = ['flop', 'turn', 'river', 'river'];
         playerRange = [2, 9];
         optionSpread = 9;
     } else {
-        // 大师：全阶段，选项差距很小
         stages = ['preflop', 'flop', 'turn', 'river'];
         playerRange = [2, 9];
         optionSpread = 7;
@@ -88,6 +91,64 @@ function getLevelConfig(level) {
     const numPlayers = playerRange[0] + Math.floor(Math.random() * (playerRange[1] - playerRange[0] + 1));
 
     return { stage, numPlayers, optionSpread };
+}
+
+// 针对已知对手手牌计算精确胜率（蒙特卡洛模拟剩余公牌）
+function simulateExact(myHand, oppHands, knownCommunity, iterations) {
+    const usedCards = new Set([...myHand, ...knownCommunity]);
+    for (const opp of oppHands) {
+        usedCards.add(opp[0]);
+        usedCards.add(opp[1]);
+    }
+    const remainDeck = buildDeck().filter(c => !usedCards.has(c));
+    const communityNeeded = 5 - knownCommunity.length;
+
+    let wins = 0, ties = 0;
+
+    for (let i = 0; i < iterations; i++) {
+        const deck = [...remainDeck];
+        shuffle(deck);
+
+        // 补全公牌
+        const simComm = [...knownCommunity];
+        for (let c = 0; c < communityNeeded; c++) {
+            simComm.push(deck[c]);
+        }
+
+        const myEval = evaluateHand([...myHand, ...simComm]);
+
+        let iWin = true, isTie = false;
+        for (const opp of oppHands) {
+            const oppEval = evaluateHand([...opp, ...simComm]);
+            const cmp = compareHands(myEval, oppEval);
+            if (cmp < 0) { iWin = false; isTie = false; break; }
+            else if (cmp === 0) { isTie = true; }
+        }
+
+        if (iWin && !isTie) wins++;
+        else if (isTie && iWin) ties++;
+    }
+
+    return Math.round((wins / iterations) * 100);
+}
+
+// 分配位置
+function assignPositions(numPlayers) {
+    // 根据人数选择合理的位置
+    let positions;
+    if (numPlayers === 2) {
+        positions = ['BTN', 'BB'];
+    } else if (numPlayers === 3) {
+        positions = ['BTN', 'SB', 'BB'];
+    } else if (numPlayers <= 6) {
+        positions = ['BTN', 'SB', 'BB', 'UTG', 'MP', 'CO'].slice(0, numPlayers);
+    } else {
+        positions = POSITION_NAMES.slice(0, numPlayers);
+    }
+    // 随机分配玩家位置
+    const shuffled = [...positions];
+    shuffle(shuffled);
+    return { playerPos: shuffled[0], oppPositions: shuffled.slice(1) };
 }
 
 // 生成一关的题目
@@ -101,7 +162,25 @@ function generateLevel(level) {
     // 发手牌
     const hand = [deck[idx++], deck[idx++]];
 
-    // 发公牌
+    // 发对手手牌
+    const numOpponents = config.numPlayers - 1;
+    const opponents = [];
+    const { playerPos, oppPositions } = assignPositions(config.numPlayers);
+
+    for (let i = 0; i < numOpponents; i++) {
+        opponents.push({
+            position: oppPositions[i],
+            cards: [deck[idx++], deck[idx++]]
+        });
+    }
+
+    // 发完整5张公牌
+    const fullCommunity = [];
+    for (let i = 0; i < 5; i++) {
+        fullCommunity.push(deck[idx++]);
+    }
+
+    // 根据阶段截取可见公牌
     let commCount = 0;
     switch (config.stage) {
         case 'preflop': commCount = 0; break;
@@ -109,22 +188,33 @@ function generateLevel(level) {
         case 'turn': commCount = 4; break;
         case 'river': commCount = 5; break;
     }
-    const community = [];
-    for (let i = 0; i < commCount; i++) {
-        community.push(deck[idx++]);
-    }
+    const community = fullCommunity.slice(0, commCount);
 
-    // 计算实际胜率（多次模拟取平均，提高准确度）
-    const simResult = simulate(hand, community, config.numPlayers, 'any', 10000);
-    const correctRate = simResult.winRate;
+    // 计算精确胜率
+    const oppHands = opponents.map(o => o.cards);
+    const correctRate = simulateExact(hand, oppHands, community, 10000);
+
+    // 计算对手牌型（基于当前可见公牌）
+    for (const opp of opponents) {
+        if (community.length > 0) {
+            const allCards = [...opp.cards, ...community];
+            const eval_ = evaluateHand(allCards);
+            opp.handType = HAND_NAMES[eval_[0]];
+        } else {
+            opp.handType = null;
+        }
+    }
 
     // 生成4个选项
     const options = generateOptions(correctRate, config.optionSpread);
 
     challengeState.handCards = hand;
     challengeState.communityCards = community;
+    challengeState.fullCommunity = fullCommunity;
     challengeState.stage = config.stage;
     challengeState.numPlayers = config.numPlayers;
+    challengeState.playerPosition = playerPos;
+    challengeState.opponents = opponents;
     challengeState.correctWinRate = correctRate;
     challengeState.options = options;
     challengeState.answered = false;
@@ -134,7 +224,6 @@ function generateLevel(level) {
 // 生成4个选项，其中一个是正确答案
 function generateOptions(correctRate, spread) {
     const options = [];
-    // 正确答案的位置随机
     const correctIdx = Math.floor(Math.random() * 4);
 
     for (let i = 0; i < 4; i++) {
@@ -144,7 +233,6 @@ function generateOptions(correctRate, spread) {
             let fakeRate;
             let attempts = 0;
             do {
-                // 生成一个偏离正确答案的值
                 const offset = (Math.random() * spread * 2 + spread) * (Math.random() < 0.5 ? -1 : 1);
                 fakeRate = Math.round(correctRate + offset);
                 fakeRate = Math.max(1, Math.min(99, fakeRate));
@@ -163,12 +251,7 @@ function generateOptions(correctRate, spread) {
 
 // 获取阶段中文名
 function getStageName(stage) {
-    const names = {
-        preflop: '翻牌前',
-        flop: '翻牌圈',
-        turn: '转牌圈',
-        river: '河牌圈'
-    };
+    const names = { preflop: '翻牌前', flop: '翻牌圈', turn: '转牌圈', river: '河牌圈' };
     return names[stage] || stage;
 }
 
@@ -179,6 +262,24 @@ function getDifficultyLabel(level) {
     if (level <= 60) return { text: '中级', cls: 'diff-medium' };
     if (level <= 80) return { text: '高级', cls: 'diff-hard' };
     return { text: '大师', cls: 'diff-master' };
+}
+
+// 生成一张牌的HTML
+function cardHTML(card, small) {
+    const { rank, suit } = parseCard(card);
+    const isRed = suit === 'h' || suit === 'd';
+    const cls = small ? 'ch-card ch-card-sm' : 'ch-card';
+    return `<div class="${cls} ${isRed ? 'ch-card-red' : 'ch-card-black'}">
+        <span class="ch-card-rank">${getRankDisplay(rank)}</span>
+        <span class="ch-card-suit">${getSuitSymbol(suit)}</span>
+    </div>`;
+}
+
+// 生成牌背HTML
+function cardBackHTML() {
+    return `<div class="ch-card ch-card-sm ch-card-back">
+        <span class="ch-card-back-icon">?</span>
+    </div>`;
 }
 
 // ========== UI 渲染 ==========
@@ -196,69 +297,53 @@ function showCalculatorMode() {
 }
 
 function renderChallengeLevel() {
-    // 如果已经通关全部
     if (challengeState.currentLevel > TOTAL_LEVELS) {
         renderChallengeComplete();
         return;
     }
 
-    // 生成题目
     generateLevel(challengeState.currentLevel);
 
     const diff = getDifficultyLabel(challengeState.currentLevel);
 
-    // 更新顶部信息
     document.getElementById('challengeLevelNum').textContent = `第 ${challengeState.currentLevel} 关`;
     document.getElementById('challengeDifficulty').textContent = diff.text;
     document.getElementById('challengeDifficulty').className = 'challenge-diff-badge ' + diff.cls;
     document.getElementById('challengeScore').textContent = `${challengeState.score}/${challengeState.completed.length}`;
 
-    // 进度条
     const progressPct = ((challengeState.currentLevel - 1) / TOTAL_LEVELS) * 100;
     document.getElementById('challengeProgressFill').style.width = progressPct + '%';
     document.getElementById('challengeProgressText').textContent = `${challengeState.currentLevel - 1}/${TOTAL_LEVELS}`;
 
-    // 场景信息
     document.getElementById('challengeStage').textContent = getStageName(challengeState.stage);
     document.getElementById('challengePlayers').textContent = challengeState.numPlayers + ' 人';
 
-    // 渲染手牌
     renderChallengeCards();
-
-    // 渲染选项
+    renderOpponents(false);
     renderChallengeOptions();
 
-    // 隐藏结果区域
     document.getElementById('challengeResult').style.display = 'none';
     document.getElementById('challengeNextBtn').style.display = 'none';
 }
 
 function renderChallengeCards() {
+    // 玩家手牌
     const handContainer = document.getElementById('challengeHandCards');
-    handContainer.innerHTML = challengeState.handCards.map(card => {
-        const { rank, suit } = parseCard(card);
-        const isRed = suit === 'h' || suit === 'd';
-        return `<div class="ch-card ${isRed ? 'ch-card-red' : 'ch-card-black'}">
-            <span class="ch-card-rank">${getRankDisplay(rank)}</span>
-            <span class="ch-card-suit">${getSuitSymbol(suit)}</span>
-        </div>`;
-    }).join('');
+    handContainer.innerHTML = challengeState.handCards.map(c => cardHTML(c, false)).join('');
 
+    // 玩家位置
+    document.getElementById('challengePlayerPos').textContent =
+        challengeState.playerPosition + ' (' + POSITION_FULL_NAMES[challengeState.playerPosition] + ')';
+
+    // 公牌
     const commContainer = document.getElementById('challengeCommCards');
     if (challengeState.communityCards.length === 0) {
         commContainer.innerHTML = '<div class="ch-no-comm">无公牌（翻牌前）</div>';
     } else {
-        commContainer.innerHTML = challengeState.communityCards.map(card => {
-            const { rank, suit } = parseCard(card);
-            const isRed = suit === 'h' || suit === 'd';
-            return `<div class="ch-card ${isRed ? 'ch-card-red' : 'ch-card-black'}">
-                <span class="ch-card-rank">${getRankDisplay(rank)}</span>
-                <span class="ch-card-suit">${getSuitSymbol(suit)}</span>
-            </div>`;
-        }).join('');
+        commContainer.innerHTML = challengeState.communityCards.map(c => cardHTML(c, false)).join('');
     }
 
-    // 显示当前牌型（如果有公牌）
+    // 当前牌型
     const handTypeEl = document.getElementById('challengeHandType');
     if (challengeState.communityCards.length > 0) {
         const allCards = [...challengeState.handCards, ...challengeState.communityCards];
@@ -268,6 +353,31 @@ function renderChallengeCards() {
     } else {
         handTypeEl.style.display = 'none';
     }
+}
+
+function renderOpponents(revealed) {
+    const container = document.getElementById('challengeOpponents');
+    const opps = challengeState.opponents;
+
+    container.innerHTML = opps.map((opp, i) => {
+        const posName = POSITION_FULL_NAMES[opp.position] || opp.position;
+        let cardsHtml, typeHtml = '';
+
+        if (revealed) {
+            cardsHtml = opp.cards.map(c => cardHTML(c, true)).join('');
+            if (opp.handType) {
+                typeHtml = `<span class="ch-opp-handtype">${opp.handType}</span>`;
+            }
+        } else {
+            cardsHtml = cardBackHTML() + cardBackHTML();
+        }
+
+        return `<div class="ch-opponent">
+            <div class="ch-opp-pos">${opp.position} <span class="ch-opp-pos-name">${posName}</span></div>
+            <div class="ch-opp-cards">${cardsHtml}</div>
+            ${typeHtml}
+        </div>`;
+    }).join('');
 }
 
 function renderChallengeOptions() {
@@ -293,7 +403,6 @@ function selectChallengeOption(idx) {
         challengeState.score++;
     }
 
-    // 记录结果
     challengeState.completed.push({
         level: challengeState.currentLevel,
         correct: isCorrect,
@@ -306,14 +415,13 @@ function selectChallengeOption(idx) {
     // 高亮选项
     challengeState.options.forEach((opt, i) => {
         const el = document.getElementById('chOpt' + i);
-        if (opt.isCorrect) {
-            el.classList.add('ch-option-correct');
-        }
-        if (i === idx && !isCorrect) {
-            el.classList.add('ch-option-wrong');
-        }
+        if (opt.isCorrect) el.classList.add('ch-option-correct');
+        if (i === idx && !isCorrect) el.classList.add('ch-option-wrong');
         el.disabled = true;
     });
+
+    // 翻开对手手牌
+    renderOpponents(true);
 
     // 显示结果
     const resultEl = document.getElementById('challengeResult');
@@ -335,10 +443,7 @@ function selectChallengeOption(idx) {
             </div>`;
     }
 
-    // 显示下一关按钮
     document.getElementById('challengeNextBtn').style.display = 'block';
-
-    // 更新得分
     document.getElementById('challengeScore').textContent = `${challengeState.score}/${challengeState.completed.length}`;
 }
 
@@ -346,7 +451,6 @@ function nextChallengeLevel() {
     challengeState.currentLevel++;
     saveChallengeProgress();
     renderChallengeLevel();
-    // 滚动到顶部
     document.getElementById('challengeApp').scrollTo(0, 0);
 }
 
@@ -431,7 +535,6 @@ function renderLevelSelect() {
 
 function jumpToLevel(level) {
     challengeState.currentLevel = level;
-    // 移除该关之后的记录
     challengeState.completed = challengeState.completed.filter(c => c.level < level);
     challengeState.score = challengeState.completed.filter(c => c.correct).length;
     saveChallengeProgress();
