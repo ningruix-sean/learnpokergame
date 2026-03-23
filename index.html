@@ -29,6 +29,12 @@
                 <div class="mode-desc">300关递进难度，从入门到大师</div>
                 <div class="mode-tag" id="campaignProgress">0/300</div>
             </div>
+            <div class="home-mode-card classic-card" onclick="showClassicMode()">
+                <div class="mode-icon">🏆</div>
+                <div class="mode-title">经典案例</div>
+                <div class="mode-desc">重现WSOP/WPT/EPT决赛桌经典牌局</div>
+                <div class="mode-tag" id="classicProgressTag">30题</div>
+            </div>
         </div>
 
         <!-- 历史最佳 -->
@@ -167,6 +173,78 @@
                 下一关 →
             </button>
         </div>
+    </div>
+
+    <!-- ========== 经典案例模式 ========== -->
+    <div id="classicApp" style="display:none;">
+        <header class="header header-classic">
+            <button class="header-btn" onclick="exitClassic()">← 返回</button>
+            <h1>经典案例</h1>
+            <div class="header-right-info">
+                <span id="classicProgress">1/30</span>
+            </div>
+        </header>
+
+        <div id="classicContent">
+            <!-- 得分 & 进度 -->
+            <div class="ch-info-bar">
+                <div class="ch-info-left">
+                    <span class="ch-level-badge">🏆 经典牌局</span>
+                </div>
+                <div class="ch-info-right">
+                    得分: <span id="classicScoreDisplay">0/0</span>
+                </div>
+            </div>
+            <div class="ch-progress">
+                <div class="ch-progress-bar">
+                    <div class="ch-progress-fill classic-progress-fill" id="classicProgressFill"></div>
+                </div>
+            </div>
+
+            <!-- 比赛信息 -->
+            <div class="classic-tournament-info">
+                <div class="classic-tournament-name" id="classicTournament"></div>
+                <div class="classic-tournament-desc" id="classicDescription"></div>
+            </div>
+
+            <!-- 场景 -->
+            <div class="ch-scenario">
+                <div class="ch-scenario-title">判断你的胜率</div>
+                <div class="ch-scenario-info">
+                    <span>阶段: <strong id="classicStage">翻牌前</strong></span>
+                    <span>玩家: <strong id="classicPlayers">2 人</strong></span>
+                </div>
+            </div>
+
+            <div class="ch-cards-section">
+                <div class="ch-cards-label">你的手牌 <span class="ch-player-pos" id="classicPlayerPos"></span></div>
+                <div class="ch-cards-row" id="classicHandCards"></div>
+            </div>
+
+            <div class="ch-cards-section">
+                <div class="ch-cards-label">公牌</div>
+                <div class="ch-cards-row" id="classicCommCards"></div>
+                <div class="ch-hand-type" id="classicHandType"></div>
+            </div>
+
+            <div class="ch-cards-section">
+                <div class="ch-cards-label">对手（答题后翻牌）</div>
+                <div class="ch-opponents" id="classicOpponents"></div>
+            </div>
+
+            <div class="ch-question">
+                <div class="ch-question-text">你认为当前胜率最接近哪个？</div>
+                <div class="ch-options" id="classicOptions"></div>
+            </div>
+
+            <div id="classicResult" style="display:none;"></div>
+
+            <button class="ch-next-btn" id="classicNextBtn" style="display:none;" onclick="nextClassicQuestion()">
+                下一题 →
+            </button>
+        </div>
+
+        <div id="classicResultPage" style="display:none;"></div>
     </div>
 
     <!-- ========== 计算器页面 ========== -->
@@ -328,6 +406,10 @@
                     <p>300关递进式难度训练，从入门到大师。每关给你手牌和公牌，判断胜率最接近哪个选项。</p>
                 </div>
                 <div class="help-section">
+                    <h3>🏆 经典案例</h3>
+                    <p>重现WSOP/WPT/EPT决赛桌的经典牌局！每题附带比赛背景介绍，在真实场景中锻炼判断力。</p>
+                </div>
+                <div class="help-section">
                     <h3>🧮 胜率计算器</h3>
                     <p>选择手牌和公牌，实时计算胜率、成牌概率和行动建议。</p>
                 </div>
@@ -348,6 +430,7 @@
     </div>
 
     <script src="poker.js"></script>
+    <script src="classics.js"></script>
     <script src="challenge.js"></script>
     <script src="app.js"></script>
 </body>

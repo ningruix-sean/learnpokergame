@@ -881,6 +881,43 @@ body {
     background: #283593;
 }
 
+/* ========== Classic Mode ========== */
+
+.classic-card {
+    background: linear-gradient(135deg, #b71c1c, #e53935);
+    color: white;
+}
+
+.header-classic {
+    background: #b71c1c;
+}
+
+.classic-tournament-info {
+    margin: 12px 16px;
+    padding: 16px;
+    background: linear-gradient(135deg, #fff8e1, #fff3e0);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    border-left: 4px solid #ff8f00;
+}
+
+.classic-tournament-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #e65100;
+    margin-bottom: 6px;
+}
+
+.classic-tournament-desc {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.6;
+}
+
+.classic-progress-fill {
+    background: linear-gradient(90deg, #b71c1c, #e53935) !important;
+}
+
 /* ========== Challenge Mode ========== */
 
 /* Info Bar */

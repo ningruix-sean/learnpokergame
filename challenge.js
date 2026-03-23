@@ -1,7 +1,8 @@
-// challenge.js - 闯关模式 + 竞技场模式
+// challenge.js - 闯关模式 + 竞技场模式 + 经典案例模式
 
 const CHALLENGE_STORAGE_KEY = 'poker_challenge_progress';
 const ARENA_STORAGE_KEY = 'poker_arena_best';
+const CLASSIC_STORAGE_KEY = 'poker_classic_progress';
 const TOTAL_LEVELS = 300;
 const ARENA_QUESTIONS = 10;
 
@@ -28,6 +29,15 @@ let arenaState = {
     stage: '', numPlayers: 2, playerPosition: '',
     opponents: [], correctWinRate: 0, options: [],
     answered: false, selectedOption: -1
+};
+
+let classicState = {
+    currentIdx: 0, score: 0, completed: [],
+    handCards: [], communityCards: [], fullCommunity: [],
+    stage: '', numPlayers: 2, playerPosition: '',
+    opponents: [], correctWinRate: 0, options: [],
+    answered: false, selectedOption: -1,
+    currentHand: null // 当前经典手牌数据
 };
 
 // ========== 存储 ==========
@@ -75,6 +85,35 @@ function saveArenaBest(result) {
             localStorage.setItem(ARENA_STORAGE_KEY, JSON.stringify(result));
         }
     } catch (e) { /* ignore */ }
+}
+
+function loadClassicProgress() {
+    try {
+        const saved = localStorage.getItem(CLASSIC_STORAGE_KEY);
+        if (saved) {
+            const data = JSON.parse(saved);
+            classicState.currentIdx = data.currentIdx || 0;
+            classicState.score = data.score || 0;
+            classicState.completed = data.completed || [];
+        }
+    } catch (e) { /* ignore */ }
+}
+
+function saveClassicProgress() {
+    try {
+        localStorage.setItem(CLASSIC_STORAGE_KEY, JSON.stringify({
+            currentIdx: classicState.currentIdx,
+            score: classicState.score,
+            completed: classicState.completed
+        }));
+    } catch (e) { /* ignore */ }
+}
+
+function resetClassicProgress() {
+    classicState.currentIdx = 0;
+    classicState.score = 0;
+    classicState.completed = [];
+    saveClassicProgress();
 }
 
 // ========== 难度配置（300关） ==========
@@ -326,7 +365,8 @@ function renderQuestionUI(state, prefix) {
     // 选项
     const optContainer = document.getElementById(prefix + 'Options');
     optContainer.innerHTML = state.options.map((opt, idx) => {
-        const fn = prefix === 'arena' ? 'selectArenaOption' : 'selectChallengeOption';
+        const fnMap = { arena: 'selectArenaOption', challenge: 'selectChallengeOption', classic: 'selectClassicOption' };
+        const fn = fnMap[prefix] || 'selectChallengeOption';
         return `<button class="ch-option" id="${prefix}Opt${idx}" onclick="${fn}(${idx})">
             <span class="ch-option-label">选项 ${['A', 'B', 'C', 'D'][idx]}</span>
             <span class="ch-option-rate">${opt.rate}%</span>
@@ -394,6 +434,7 @@ function showHomeMode() {
     document.getElementById('app').style.display = 'none';
     document.getElementById('challengeApp').style.display = 'none';
     document.getElementById('arenaApp').style.display = 'none';
+    document.getElementById('classicApp').style.display = 'none';
     updateHomeStats();
 }
 
@@ -417,6 +458,17 @@ function updateHomeStats() {
     loadChallengeProgress();
     const el = document.getElementById('campaignProgress');
     if (el) el.textContent = `${challengeState.completed.length}/${TOTAL_LEVELS}`;
+
+    // 经典案例进度
+    loadClassicProgress();
+    const classicTag = document.getElementById('classicProgressTag');
+    if (classicTag) {
+        if (classicState.completed.length > 0) {
+            classicTag.textContent = `${classicState.completed.length}/${CLASSIC_HANDS.length}`;
+        } else {
+            classicTag.textContent = `${CLASSIC_HANDS.length}题`;
+        }
+    }
 
     const statsEl = document.getElementById('homeStats');
     const best = loadArenaBest();
@@ -739,4 +791,141 @@ function jumpToLevel(level) {
     saveChallengeProgress();
     hideLevelSelect();
     renderChallengeLevel();
+}
+
+// ========== 经典案例模式 ==========
+
+function showClassicMode() {
+    document.getElementById('homeApp').style.display = 'none';
+    document.getElementById('classicApp').style.display = 'block';
+    document.getElementById('arenaApp').style.display = 'none';
+    document.getElementById('challengeApp').style.display = 'none';
+    document.getElementById('app').style.display = 'none';
+    loadClassicProgress();
+    renderClassicQuestion();
+}
+
+function exitClassic() {
+    showHomeMode();
+}
+
+function renderClassicQuestion() {
+    if (classicState.currentIdx >= CLASSIC_HANDS.length) {
+        renderClassicComplete();
+        return;
+    }
+
+    const hand = CLASSIC_HANDS[classicState.currentIdx];
+    classicState.currentHand = hand;
+
+    // 用经典手牌数据构建题目
+    const opponents = hand.villains.map(v => ({
+        position: v.position,
+        cards: v.cards,
+        handType: hand.community.length > 0 ? HAND_NAMES[evaluateHand([...v.cards, ...hand.community])[0]] : null
+    }));
+
+    const oppHands = opponents.map(o => o.cards);
+    const runs = 3, iterPerRun = 20000;
+    let totalRate = 0;
+    for (let r = 0; r < runs; r++) {
+        totalRate += simulateExact(hand.heroCards, oppHands, hand.community, iterPerRun);
+    }
+    const correctRate = Math.round(totalRate / runs);
+
+    // 经典案例用较小的选项间距（更有挑战）
+    const optionSpread = 12;
+    const options = generateOptions(correctRate, optionSpread);
+
+    classicState.handCards = hand.heroCards;
+    classicState.communityCards = hand.community;
+    classicState.fullCommunity = hand.community;
+    classicState.stage = hand.stage;
+    classicState.numPlayers = hand.numPlayers;
+    classicState.playerPosition = hand.heroPos;
+    classicState.opponents = opponents;
+    classicState.correctWinRate = correctRate;
+    classicState.options = options;
+    classicState.answered = false;
+    classicState.selectedOption = -1;
+
+    // 更新UI
+    document.getElementById('classicContent').style.display = 'block';
+    document.getElementById('classicResultPage').style.display = 'none';
+
+    document.getElementById('classicProgress').textContent = `${classicState.currentIdx + 1}/${CLASSIC_HANDS.length}`;
+    document.getElementById('classicScoreDisplay').textContent = `${classicState.score}/${classicState.completed.length}`;
+
+    // 进度条
+    const pct = (classicState.currentIdx / CLASSIC_HANDS.length) * 100;
+    document.getElementById('classicProgressFill').style.width = pct + '%';
+
+    // 比赛信息
+    document.getElementById('classicTournament').textContent = hand.tournament;
+    document.getElementById('classicDescription').textContent = hand.description;
+
+    // 渲染题目UI
+    renderQuestionUI(classicState, 'classic');
+    document.getElementById('classicNextBtn').style.display = 'none';
+}
+
+function selectClassicOption(idx) {
+    if (classicState.answered) return;
+    classicState.answered = true;
+    classicState.selectedOption = idx;
+
+    const selected = classicState.options[idx];
+    const isCorrect = showAnswerResult(classicState, idx, 'classic');
+
+    if (isCorrect) classicState.score++;
+
+    classicState.completed.push({
+        id: classicState.currentHand.id,
+        correct: isCorrect,
+        playerAnswer: selected.rate,
+        correctAnswer: classicState.correctWinRate
+    });
+
+    classicState.currentIdx++;
+    saveClassicProgress();
+
+    document.getElementById('classicNextBtn').style.display = 'block';
+    document.getElementById('classicNextBtn').textContent =
+        classicState.currentIdx >= CLASSIC_HANDS.length ? '查看结果' : '下一题 →';
+    document.getElementById('classicScoreDisplay').textContent = `${classicState.score}/${classicState.completed.length}`;
+}
+
+function nextClassicQuestion() {
+    renderClassicQuestion();
+    document.getElementById('classicApp').scrollTo(0, 0);
+}
+
+function renderClassicComplete() {
+    document.getElementById('classicContent').style.display = 'none';
+    const page = document.getElementById('classicResultPage');
+    page.style.display = 'block';
+
+    const total = classicState.completed.length;
+    const accuracy = total > 0 ? Math.round((classicState.score / total) * 100) : 0;
+    const eval_ = getArenaEvaluation(Math.round(classicState.score / total * ARENA_QUESTIONS));
+
+    page.innerHTML = `
+        <div class="arena-result-container">
+            <div class="arena-result-grade ${eval_.gradeClass}">${eval_.grade}</div>
+            <div class="arena-result-title">${eval_.title}</div>
+            <div class="arena-result-desc">你完成了全部 ${CLASSIC_HANDS.length} 个经典案例！</div>
+            <div class="arena-result-stats">
+                <div class="ch-stat"><div class="ch-stat-num">${classicState.score}</div><div class="ch-stat-label">答对</div></div>
+                <div class="ch-stat"><div class="ch-stat-num">${total - classicState.score}</div><div class="ch-stat-label">答错</div></div>
+                <div class="ch-stat"><div class="ch-stat-num">${accuracy}%</div><div class="ch-stat-label">正确率</div></div>
+            </div>
+            <button class="ch-restart-btn" onclick="restartClassic()">重新挑战</button>
+            <button class="ch-back-btn" onclick="showHomeMode()">返回首页</button>
+        </div>
+    `;
+}
+
+function restartClassic() {
+    resetClassicProgress();
+    showClassicMode();
 }
