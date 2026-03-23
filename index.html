@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>德州扑克胜率计算器</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Main Calculator Page -->
+    <div id="app">
+        <!-- Header -->
+        <header class="header">
+            <button class="header-btn" onclick="showHelp()">📖 说明</button>
+            <h1>德州扑克胜率计算器</h1>
+            <button class="header-btn" onclick="showFeedback()">⭐ 反馈</button>
+        </header>
+
+        <!-- Win Rate Display -->
+        <section class="win-rate-section" id="winRateSection">
+            <div class="win-rate-left">
+                <div class="win-rate-label">胜率</div>
+                <div class="win-rate-number" id="winRate">--</div>
+                <div class="tie-rate" id="tieRate">平--%</div>
+            </div>
+            <div class="win-rate-divider"></div>
+            <div class="win-rate-right">
+                <div class="advice-title" id="adviceTitle">选择手牌开始</div>
+                <div class="advice-desc" id="adviceDesc">请先选择你的两张手牌</div>
+            </div>
+        </section>
+
+        <!-- Hand Cards -->
+        <section class="card-section">
+            <div class="section-label">手牌</div>
+            <div class="cards-row hand-cards">
+                <div class="card-slot" id="hand0" onclick="openCardPicker('hand', 0)">
+                    <span class="card-placeholder">+</span>
+                </div>
+                <div class="card-slot" id="hand1" onclick="openCardPicker('hand', 1)">
+                    <span class="card-placeholder">+</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Community Cards -->
+        <section class="card-section">
+            <div class="section-header">
+                <span class="section-label">公牌</span>
+                <span class="street-label" id="streetLabel">--</span>
+            </div>
+            <div class="cards-row community-cards">
+                <div class="card-slot" id="comm0" onclick="openCardPicker('community', 0)">
+                    <span class="card-placeholder">+</span>
+                </div>
+                <div class="card-slot" id="comm1" onclick="openCardPicker('community', 1)">
+                    <span class="card-placeholder">+</span>
+                </div>
+                <div class="card-slot" id="comm2" onclick="openCardPicker('community', 2)">
+                    <span class="card-placeholder">+</span>
+                </div>
+                <div class="card-slot dashed" id="comm3" onclick="openCardPicker('community', 3)">
+                    <span class="card-placeholder">+</span>
+                </div>
+                <div class="card-slot dashed" id="comm4" onclick="openCardPicker('community', 4)">
+                    <span class="card-placeholder">+</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Player Count & Opponent Range -->
+        <section class="settings-row">
+            <div class="setting-card player-count-card">
+                <div class="setting-header">
+                    <span>玩家数量</span>
+                    <span class="player-num" id="playerNumDisplay">6 人</span>
+                </div>
+                <div class="preset-btns">
+                    <button class="preset-btn" onclick="setPlayers(2)">单挑</button>
+                    <button class="preset-btn active" onclick="setPlayers(6)">6人桌</button>
+                    <button class="preset-btn" onclick="setPlayers(9)">9人桌</button>
+                </div>
+                <div class="slider-row">
+                    <span>2</span>
+                    <input type="range" min="2" max="10" value="6" id="playerSlider" oninput="updatePlayerCount(this.value)">
+                    <span>10</span>
+                </div>
+            </div>
+            <div class="setting-card opponent-range-card">
+                <div class="setting-header">
+                    <span>对手范围</span>
+                    <button class="modify-btn" onclick="openRangePicker()">修改</button>
+                </div>
+                <div class="range-display" id="rangeDisplay">任意两张</div>
+            </div>
+        </section>
+
+        <!-- Hand Probability & Opponent Hands -->
+        <section class="settings-row">
+            <div class="setting-card">
+                <div class="setting-title">成牌概率</div>
+                <div id="handProbabilities" class="prob-list">
+                    <div class="prob-placeholder">选择手牌后显示</div>
+                </div>
+            </div>
+            <div class="setting-card">
+                <div class="setting-title">对手可能牌型</div>
+                <div id="opponentHands" class="prob-list">
+                    <div class="prob-placeholder">选择手牌后显示</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Clear Button -->
+        <section class="clear-section">
+            <button class="clear-btn" onclick="clearAll()">清空所有</button>
+        </section>
+    </div>
+
+    <!-- Card Picker Modal -->
+    <div class="modal-overlay" id="cardPickerModal" onclick="closeCardPicker(event)">
+        <div class="modal-content card-picker-content">
+            <div class="modal-header">
+                <h2>选择卡牌</h2>
+                <button class="close-btn" onclick="closeCardPicker()">✕</button>
+            </div>
+            <div class="suit-tabs">
+                <button class="suit-tab active" data-suit="all" onclick="filterSuit('all')">全部</button>
+                <button class="suit-tab spade" data-suit="s" onclick="filterSuit('s')">♠</button>
+                <button class="suit-tab heart" data-suit="h" onclick="filterSuit('h')">♥</button>
+                <button class="suit-tab club" data-suit="c" onclick="filterSuit('c')">♣</button>
+                <button class="suit-tab diamond" data-suit="d" onclick="filterSuit('d')">♦</button>
+            </div>
+            <div class="card-grid" id="cardGrid"></div>
+            <button class="remove-card-btn" id="removeCardBtn" onclick="removeSelectedCard()">移除此牌</button>
+        </div>
+    </div>
+
+    <!-- Range Picker Modal -->
+    <div class="modal-overlay" id="rangePickerModal" onclick="closeRangePicker(event)">
+        <div class="modal-content range-picker-content">
+            <div class="modal-header">
+                <h2>选择对手范围</h2>
+                <button class="close-btn" onclick="closeRangePicker()">✕</button>
+            </div>
+            <div class="range-options">
+                <button class="range-option active" data-range="any" onclick="selectRange('any')">
+                    <strong>任意两张</strong>
+                    <small>对手可能拿任何牌</small>
+                </button>
+                <button class="range-option" data-range="top" onclick="selectRange('top')">
+                    <strong>大牌范围</strong>
+                    <small>TT+, AQ+</small>
+                </button>
+                <button class="range-option" data-range="broadway" onclick="selectRange('broadway')">
+                    <strong>Broadway</strong>
+                    <small>10以上的牌</small>
+                </button>
+                <button class="range-option" data-range="pairs" onclick="selectRange('pairs')">
+                    <strong>对子</strong>
+                    <small>任意对子</small>
+                </button>
+                <button class="range-option" data-range="suited" onclick="selectRange('suited')">
+                    <strong>同花牌</strong>
+                    <small>任意同花色</small>
+                </button>
+                <button class="range-option" data-range="connectors" onclick="selectRange('connectors')">
+                    <strong>同花连张</strong>
+                    <small>同花连张</small>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div class="modal-overlay" id="helpModal" onclick="closeHelp(event)">
+        <div class="modal-content help-content">
+            <div class="modal-header">
+                <h2>📖 使用说明</h2>
+                <button class="close-btn" onclick="closeHelp()">← 返回工具</button>
+            </div>
+            <div class="help-body">
+                <div class="help-section">
+                    <h3>🎯 核心功能</h3>
+                    <p>📊 <strong>胜率计算</strong> — 基于蒙特卡洛模拟，实时计算当前手牌在多人对局中的获胜概率</p>
+                    <p>🎲 <strong>成牌概率</strong> — 预测翻牌后可能形成的牌型（同花、顺子、葫芦等）的概率分布</p>
+                    <p>💡 <strong>行动建议</strong> — 根据胜率、听牌情况给出弃牌/跟注/加注的决策建议</p>
+                    <p>🎭 <strong>对手范围</strong> — 根据对手风格选择可能的手牌范围，更精确地计算胜率</p>
+                </div>
+                <div class="help-section">
+                    <h3>⚙️ 工作原理</h3>
+                    <p><strong>蒙特卡洛模拟：</strong>通过数千次随机模拟对手手牌和剩余公牌来计算胜率。每次模拟会随机补全公牌和对手手牌，然后比较牌力，统计胜负结果。</p>
+                    <p>💡 模拟次数越多结果越精确，但需要更多计算时间。本工具使用8000次模拟，在精度和速度间取得平衡。</p>
+                </div>
+                <div class="help-section">
+                    <h3>📋 对手范围详解</h3>
+                    <table class="range-table">
+                        <tr><th>范围</th><th>说明</th><th>适用场景</th></tr>
+                        <tr><td>任意两张</td><td>对手可能拿任何牌</td><td>多人limp池、松凶型对手</td></tr>
+                        <tr><td>大牌范围</td><td>TT+, AQ+</td><td>紧凶型对手、前面位置加注</td></tr>
+                        <tr><td>Broadway</td><td>10以上的牌</td><td>中等风格对手</td></tr>
+                        <tr><td>对子</td><td>任意对子</td><td>喜欢投机暗三条的对手</td></tr>
+                        <tr><td>同花牌</td><td>任意同花色</td><td>喜欢追逐同花的对手</td></tr>
+                        <tr><td>同花连张</td><td>同花连张</td><td>喜欢投机顺子/同花的对手</td></tr>
+                    </table>
+                </div>
+                <div class="help-section">
+                    <h3>📝 新手入门教程</h3>
+                    <ol>
+                        <li><strong>输入你的手牌</strong> — 点击"手牌"区域的两张卡片，选择你的底牌（如A♠K♥）</li>
+                        <li><strong>输入公共牌</strong> — 根据游戏阶段选择0-5张公牌。翻牌前不选，翻牌圈选3张，转牌圈选4张</li>
+                        <li><strong>设置玩家数量</strong> — 拖动滑块或点击快捷按钮设置桌上有多少玩家</li>
+                        <li><strong>选择对手范围（进阶）</strong> — 根据对手风格选择可能的手牌范围，获得更精确的胜率</li>
+                        <li><strong>查看结果</strong> — 系统实时显示胜率、行动建议、成牌概率和对手可能的牌型分布</li>
+                    </ol>
+                </div>
+                <div class="help-section">
+                    <h3>🔥 进阶技巧</h3>
+                    <ol>
+                        <li><strong>翻牌前决策：</strong>输入手牌后直接看胜率，>70%考虑加注，<30%考虑弃牌</li>
+                        <li><strong>听牌判断：</strong>看"成牌概率"中的同花/顺子概率，>30%是强听牌可以跟注</li>
+                        <li><strong>对手分析：</strong>结合"对手可能牌型"判断，如果对手很可能成顺子，即使你有对子也要谨慎</li>
+                        <li><strong>多人桌调整：</strong>玩家越多，大牌胜率下降越快，需要更强的牌才能入池</li>
+                    </ol>
+                    <p class="warning">⚠️ 本工具仅供参考，实际对局还需考虑位置、筹码深度、对手习惯等因素</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="poker.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

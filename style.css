@@ -1,0 +1,687 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+:root {
+    --green: #2d7a3a;
+    --green-light: #e8f5e9;
+    --green-dark: #1b5e20;
+    --red: #d32f2f;
+    --orange: #f5a623;
+    --bg: #f5f5f5;
+    --card-bg: #ffffff;
+    --text: #333333;
+    --text-light: #888888;
+    --border: #e0e0e0;
+    --shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    max-width: 480px;
+    margin: 0 auto;
+    padding-bottom: 20px;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* Header */
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--green);
+    color: white;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.header h1 {
+    font-size: 17px;
+    font-weight: 600;
+}
+
+.header-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.header-btn:active {
+    background: rgba(255,255,255,0.2);
+}
+
+/* Win Rate Section */
+.win-rate-section {
+    margin: 12px 16px;
+    padding: 20px;
+    background: #fffde7;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: var(--shadow);
+}
+
+.win-rate-left {
+    text-align: center;
+    min-width: 80px;
+}
+
+.win-rate-label {
+    font-size: 13px;
+    color: var(--text-light);
+}
+
+.win-rate-number {
+    font-size: 42px;
+    font-weight: 700;
+    color: var(--red);
+    line-height: 1.1;
+}
+
+.tie-rate {
+    font-size: 12px;
+    color: var(--text-light);
+}
+
+.win-rate-divider {
+    width: 2px;
+    height: 50px;
+    background: #ddd;
+    flex-shrink: 0;
+}
+
+.win-rate-right {
+    flex: 1;
+}
+
+.advice-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--red);
+    margin-bottom: 4px;
+}
+
+.advice-title.fold { color: var(--red); }
+.advice-title.call { color: var(--orange); }
+.advice-title.raise { color: var(--green); }
+
+.advice-desc {
+    font-size: 13px;
+    color: var(--text-light);
+    line-height: 1.4;
+}
+
+/* Card Section */
+.card-section {
+    margin: 12px 16px;
+    padding: 16px 20px;
+    background: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.section-label {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 12px;
+}
+
+.section-header .section-label {
+    margin-bottom: 0;
+}
+
+.street-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--green);
+}
+
+.cards-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 12px;
+}
+
+.hand-cards {
+    justify-content: flex-end;
+}
+
+.card-slot {
+    width: 64px;
+    height: 88px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    background: white;
+    transition: transform 0.15s, box-shadow 0.15s;
+    position: relative;
+    flex-direction: column;
+}
+
+.card-slot:active {
+    transform: scale(0.95);
+}
+
+.card-slot.dashed {
+    border-style: dashed;
+}
+
+.card-slot.filled {
+    border-color: var(--green);
+    border-style: solid;
+    box-shadow: 0 2px 6px rgba(45,122,58,0.15);
+}
+
+.card-placeholder {
+    font-size: 24px;
+    color: #ccc;
+}
+
+.card-slot .card-rank {
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.card-slot .card-suit-icon {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.card-slot.suit-h .card-rank,
+.card-slot.suit-h .card-suit-icon,
+.card-slot.suit-d .card-rank,
+.card-slot.suit-d .card-suit-icon {
+    color: var(--red);
+}
+
+.card-slot.suit-s .card-rank,
+.card-slot.suit-s .card-suit-icon,
+.card-slot.suit-c .card-rank,
+.card-slot.suit-c .card-suit-icon {
+    color: #333;
+}
+
+/* Settings Row */
+.settings-row {
+    display: flex;
+    gap: 12px;
+    margin: 12px 16px;
+}
+
+.setting-card {
+    flex: 1;
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 14px;
+    box-shadow: var(--shadow);
+}
+
+.setting-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.setting-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.player-num {
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.preset-btns {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.preset-btn {
+    flex: 1;
+    padding: 6px 4px;
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    background: white;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.preset-btn.active {
+    border-color: var(--green);
+    color: var(--green);
+    font-weight: 600;
+    background: var(--green-light);
+}
+
+.slider-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-light);
+}
+
+.slider-row input[type="range"] {
+    flex: 1;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: #ddd;
+    border-radius: 2px;
+    outline: none;
+}
+
+.slider-row input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 22px;
+    height: 22px;
+    background: var(--green-dark);
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.modify-btn {
+    padding: 4px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: white;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.range-display {
+    font-size: 18px;
+    font-weight: 700;
+    text-align: center;
+    padding: 8px 0;
+}
+
+/* Probability Lists */
+.prob-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.prob-placeholder {
+    text-align: center;
+    color: var(--text-light);
+    font-size: 13px;
+    padding: 10px 0;
+}
+
+.prob-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+}
+
+.prob-item .prob-name {
+    min-width: 42px;
+    font-weight: 500;
+}
+
+.prob-item .prob-name.current {
+    color: var(--green);
+    font-weight: 700;
+}
+
+.prob-item .prob-name.current::after {
+    content: " ✓";
+}
+
+.prob-item .prob-bar-wrap {
+    flex: 1;
+    height: 6px;
+    background: #eee;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.prob-item .prob-bar {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s;
+}
+
+.prob-item .prob-bar.green {
+    background: var(--green-dark);
+}
+
+.prob-item .prob-bar.orange {
+    background: var(--orange);
+}
+
+.prob-item .prob-value {
+    min-width: 36px;
+    text-align: right;
+    font-weight: 600;
+}
+
+/* Clear Button */
+.clear-section {
+    margin: 20px 16px;
+}
+
+.clear-btn {
+    width: 100%;
+    padding: 14px;
+    border: 2px solid var(--red);
+    border-radius: 12px;
+    background: white;
+    color: var(--red);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.clear-btn:active {
+    background: var(--red);
+    color: white;
+}
+
+/* Modal */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 200;
+    justify-content: center;
+    align-items: flex-end;
+}
+
+.modal-overlay.active {
+    display: flex;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 16px 16px 0 0;
+    width: 100%;
+    max-width: 480px;
+    max-height: 85vh;
+    overflow-y: auto;
+    animation: slideUp 0.25s ease-out;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 1;
+}
+
+.modal-header h2 {
+    font-size: 17px;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+    color: var(--green);
+    padding: 4px 8px;
+}
+
+/* Card Picker */
+.suit-tabs {
+    display: flex;
+    padding: 12px 16px;
+    gap: 8px;
+}
+
+.suit-tab {
+    flex: 1;
+    padding: 8px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    background: white;
+    font-size: 16px;
+    cursor: pointer;
+    text-align: center;
+}
+
+.suit-tab.active {
+    border-color: var(--green);
+    background: var(--green-light);
+    font-weight: 600;
+}
+
+.suit-tab.spade { color: #333; }
+.suit-tab.heart { color: var(--red); }
+.suit-tab.club { color: #333; }
+.suit-tab.diamond { color: var(--red); }
+
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    padding: 8px 16px 16px;
+}
+
+.card-pick {
+    aspect-ratio: 3/4;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    background: white;
+    transition: all 0.15s;
+    font-size: 14px;
+    gap: 2px;
+}
+
+.card-pick:active {
+    transform: scale(0.93);
+}
+
+.card-pick .pick-rank {
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.card-pick .pick-suit {
+    font-size: 16px;
+}
+
+.card-pick.red { color: var(--red); }
+.card-pick.black { color: #333; }
+
+.card-pick.used {
+    opacity: 0.25;
+    pointer-events: none;
+    background: #f5f5f5;
+}
+
+.card-pick.selected {
+    border-color: var(--green);
+    background: var(--green-light);
+    box-shadow: 0 0 0 2px var(--green);
+}
+
+.remove-card-btn {
+    display: none;
+    width: calc(100% - 32px);
+    margin: 0 16px 16px;
+    padding: 12px;
+    border: 1.5px solid var(--red);
+    border-radius: 8px;
+    background: white;
+    color: var(--red);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.remove-card-btn.visible {
+    display: block;
+}
+
+/* Range Picker */
+.range-options {
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.range-option {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 14px 16px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    background: white;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s;
+}
+
+.range-option strong {
+    font-size: 15px;
+}
+
+.range-option small {
+    font-size: 12px;
+    color: var(--text-light);
+    margin-top: 2px;
+}
+
+.range-option.active {
+    border-color: var(--green);
+    background: var(--green-light);
+}
+
+/* Help Modal */
+.help-content {
+    max-height: 90vh;
+}
+
+.help-body {
+    padding: 16px 20px;
+}
+
+.help-section {
+    background: var(--card-bg);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: var(--shadow);
+}
+
+.help-section h3 {
+    font-size: 16px;
+    margin-bottom: 10px;
+    color: var(--green-dark);
+}
+
+.help-section p {
+    font-size: 13px;
+    line-height: 1.6;
+    margin-bottom: 6px;
+}
+
+.help-section ol {
+    padding-left: 20px;
+    font-size: 13px;
+    line-height: 1.8;
+}
+
+.range-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin-top: 8px;
+}
+
+.range-table th {
+    background: var(--green-light);
+    padding: 6px 8px;
+    text-align: left;
+    font-weight: 600;
+}
+
+.range-table td {
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border);
+}
+
+.warning {
+    background: #fff3e0;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 12px !important;
+    color: #e65100;
+    margin-top: 8px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 360px) {
+    .card-slot {
+        width: 54px;
+        height: 76px;
+    }
+    .card-slot .card-rank {
+        font-size: 22px;
+    }
+    .win-rate-number {
+        font-size: 36px;
+    }
+    .card-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px;
+    }
+}
