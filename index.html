@@ -13,7 +13,7 @@
         <header class="header">
             <button class="header-btn" onclick="showHelp()">📖 说明</button>
             <h1>德州扑克胜率计算器</h1>
-            <button class="header-btn" onclick="showFeedback()">⭐ 反馈</button>
+            <button class="header-btn challenge-btn" onclick="showChallengeMode()">🎮 闯关</button>
         </header>
 
         <!-- Win Rate Display -->
@@ -228,7 +228,92 @@
         </div>
     </div>
 
+    <!-- Challenge Mode -->
+    <div id="challengeApp" style="display:none;">
+        <header class="header">
+            <button class="header-btn" onclick="showCalculatorMode()">← 计算器</button>
+            <h1>闯关模式</h1>
+            <button class="header-btn" onclick="showLevelSelect()">📋 关卡</button>
+        </header>
+
+        <!-- 关卡选择面板 -->
+        <div id="challengeLevelSelect" style="display:none;">
+            <div class="ch-level-select-header">
+                <h3>选择关卡</h3>
+                <button class="ch-level-select-close" onclick="hideLevelSelect()">✕</button>
+            </div>
+            <div class="ch-level-legend">
+                <span class="ch-legend-item"><span class="ch-legend-dot lvl-correct-dot"></span>正确</span>
+                <span class="ch-legend-item"><span class="ch-legend-dot lvl-wrong-dot"></span>错误</span>
+                <span class="ch-legend-item"><span class="ch-legend-dot lvl-current-dot"></span>当前</span>
+            </div>
+            <div class="ch-level-grid" id="levelSelectGrid"></div>
+            <div class="ch-level-select-actions">
+                <button class="ch-restart-btn" onclick="restartChallenge()">重新开始</button>
+            </div>
+        </div>
+
+        <!-- 关卡内容 -->
+        <div id="challengeLevelContent">
+            <!-- 顶部信息栏 -->
+            <div class="ch-info-bar">
+                <div class="ch-info-left">
+                    <span class="ch-level-badge" id="challengeLevelNum">第 1 关</span>
+                    <span class="challenge-diff-badge" id="challengeDifficulty">入门</span>
+                </div>
+                <div class="ch-info-right">
+                    得分: <span id="challengeScore">0/0</span>
+                </div>
+            </div>
+
+            <!-- 进度条 -->
+            <div class="ch-progress">
+                <div class="ch-progress-bar">
+                    <div class="ch-progress-fill" id="challengeProgressFill"></div>
+                </div>
+                <span class="ch-progress-text" id="challengeProgressText">0/100</span>
+            </div>
+
+            <!-- 场景描述 -->
+            <div class="ch-scenario">
+                <div class="ch-scenario-title">判断你的胜率</div>
+                <div class="ch-scenario-info">
+                    <span>阶段: <strong id="challengeStage">翻牌前</strong></span>
+                    <span>玩家: <strong id="challengePlayers">2 人</strong></span>
+                </div>
+            </div>
+
+            <!-- 手牌 -->
+            <div class="ch-cards-section">
+                <div class="ch-cards-label">你的手牌</div>
+                <div class="ch-cards-row" id="challengeHandCards"></div>
+            </div>
+
+            <!-- 公牌 -->
+            <div class="ch-cards-section">
+                <div class="ch-cards-label">公牌</div>
+                <div class="ch-cards-row" id="challengeCommCards"></div>
+                <div class="ch-hand-type" id="challengeHandType"></div>
+            </div>
+
+            <!-- 问题 -->
+            <div class="ch-question">
+                <div class="ch-question-text">你认为当前胜率最接近哪个？</div>
+                <div class="ch-options" id="challengeOptions"></div>
+            </div>
+
+            <!-- 结果 -->
+            <div id="challengeResult" style="display:none;"></div>
+
+            <!-- 下一关按钮 -->
+            <button class="ch-next-btn" id="challengeNextBtn" style="display:none;" onclick="nextChallengeLevel()">
+                下一关 →
+            </button>
+        </div>
+    </div>
+
     <script src="poker.js"></script>
+    <script src="challenge.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
