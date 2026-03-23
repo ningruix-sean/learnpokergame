@@ -860,9 +860,10 @@ function renderClassicQuestion() {
     const pct = (classicState.currentIdx / CLASSIC_HANDS.length) * 100;
     document.getElementById('classicProgressFill').style.width = pct + '%';
 
-    // 比赛信息
+    // 比赛信息 — 答题前只显示比赛名称，隐藏详细描述
     document.getElementById('classicTournament').textContent = hand.tournament;
-    document.getElementById('classicDescription').textContent = hand.description;
+    document.getElementById('classicDescription').textContent = '';
+    document.getElementById('classicTournamentInfo').classList.remove('revealed');
 
     // 渲染题目UI
     renderQuestionUI(classicState, 'classic');
@@ -876,6 +877,10 @@ function selectClassicOption(idx) {
 
     const selected = classicState.options[idx];
     const isCorrect = showAnswerResult(classicState, idx, 'classic');
+
+    // 揭晓比赛描述
+    document.getElementById('classicDescription').textContent = classicState.currentHand.description;
+    document.getElementById('classicTournamentInfo').classList.add('revealed');
 
     if (isCorrect) classicState.score++;
 

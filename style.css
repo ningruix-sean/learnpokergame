@@ -894,16 +894,29 @@ body {
 
 .classic-tournament-info {
     margin: 12px 16px;
-    padding: 16px;
-    background: linear-gradient(135deg, #fff8e1, #fff3e0);
+    padding: 12px 16px;
+    background: #f5f5f5;
     border-radius: 12px;
     box-shadow: var(--shadow);
-    border-left: 4px solid #ff8f00;
+    border-left: 4px solid #bdbdbd;
+    transition: all 0.4s;
+}
+
+.classic-tournament-info.revealed {
+    background: linear-gradient(135deg, #fff8e1, #fff3e0);
+    border-left-color: #ff8f00;
+    padding: 16px;
 }
 
 .classic-tournament-name {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 700;
+    color: var(--text-light);
+    transition: color 0.3s, font-size 0.3s;
+}
+
+.classic-tournament-info.revealed .classic-tournament-name {
+    font-size: 15px;
     color: #e65100;
     margin-bottom: 6px;
 }
@@ -912,6 +925,16 @@ body {
     font-size: 13px;
     color: var(--text);
     line-height: 1.6;
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: max-height 0.4s, opacity 0.4s, margin 0.4s;
+}
+
+.classic-tournament-info.revealed .classic-tournament-desc {
+    max-height: 200px;
+    opacity: 1;
+    margin-top: 4px;
 }
 
 .classic-progress-fill {
