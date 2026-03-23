@@ -1,35 +1,37 @@
-// challenge.js - 闯关模式：100关德州扑克胜率训练
+// challenge.js - 闯关模式 + 竞技场模式
 
 const CHALLENGE_STORAGE_KEY = 'poker_challenge_progress';
-const TOTAL_LEVELS = 100;
+const ARENA_STORAGE_KEY = 'poker_arena_best';
+const TOTAL_LEVELS = 300;
+const ARENA_QUESTIONS = 10;
 
-// 牌桌位置名（按顺序排列）
+// 牌桌位置
 const POSITION_NAMES = ['BTN', 'SB', 'BB', 'UTG', 'UTG+1', 'MP', 'MP+1', 'HJ', 'CO'];
 const POSITION_FULL_NAMES = {
     BTN: '庄家', SB: '小盲', BB: '大盲', UTG: '枪口',
     'UTG+1': '枪口+1', MP: '中位', 'MP+1': '中位+1', HJ: '劫持位', CO: '关煞位'
 };
 
-// 闯关状态
+// ========== 共享状态 ==========
+
 let challengeState = {
-    currentLevel: 1,
-    score: 0,
-    completed: [],
-    // 当前关卡
-    handCards: [],
-    communityCards: [],
-    fullCommunity: [],  // 完整的5张公牌（用于翻牌后揭晓）
-    stage: '',
-    numPlayers: 2,
-    playerPosition: '',
-    opponents: [],      // [{position, cards: [c1, c2], handType}]
-    correctWinRate: 0,
-    options: [],
-    answered: false,
-    selectedOption: -1
+    currentLevel: 1, score: 0, completed: [],
+    handCards: [], communityCards: [], fullCommunity: [],
+    stage: '', numPlayers: 2, playerPosition: '',
+    opponents: [], correctWinRate: 0, options: [],
+    answered: false, selectedOption: -1
 };
 
-// 加载进度
+let arenaState = {
+    currentQ: 0, score: 0, results: [],
+    handCards: [], communityCards: [], fullCommunity: [],
+    stage: '', numPlayers: 2, playerPosition: '',
+    opponents: [], correctWinRate: 0, options: [],
+    answered: false, selectedOption: -1
+};
+
+// ========== 存储 ==========
+
 function loadChallengeProgress() {
     try {
         const saved = localStorage.getItem(CHALLENGE_STORAGE_KEY);
@@ -42,7 +44,6 @@ function loadChallengeProgress() {
     } catch (e) { /* ignore */ }
 }
 
-// 保存进度
 function saveChallengeProgress() {
     try {
         localStorage.setItem(CHALLENGE_STORAGE_KEY, JSON.stringify({
@@ -53,7 +54,6 @@ function saveChallengeProgress() {
     } catch (e) { /* ignore */ }
 }
 
-// 重置进度
 function resetChallengeProgress() {
     challengeState.currentLevel = 1;
     challengeState.score = 0;
@@ -61,30 +61,59 @@ function resetChallengeProgress() {
     saveChallengeProgress();
 }
 
-// 根据关卡难度决定参数
+function loadArenaBest() {
+    try {
+        const saved = localStorage.getItem(ARENA_STORAGE_KEY);
+        return saved ? JSON.parse(saved) : null;
+    } catch (e) { return null; }
+}
+
+function saveArenaBest(result) {
+    try {
+        const prev = loadArenaBest();
+        if (!prev || result.score > prev.score) {
+            localStorage.setItem(ARENA_STORAGE_KEY, JSON.stringify(result));
+        }
+    } catch (e) { /* ignore */ }
+}
+
+// ========== 难度配置（300关） ==========
+
 function getLevelConfig(level) {
     let stages, playerRange, optionSpread;
 
-    if (level <= 20) {
+    if (level <= 30) {
         stages = ['preflop', 'preflop', 'flop', 'flop', 'preflop'];
-        playerRange = [2, 4];
-        optionSpread = 20;
-    } else if (level <= 40) {
-        stages = ['preflop', 'flop', 'flop', 'turn'];
-        playerRange = [2, 6];
-        optionSpread = 15;
+        playerRange = [2, 3];
+        optionSpread = 22;
     } else if (level <= 60) {
+        stages = ['preflop', 'preflop', 'flop', 'flop'];
+        playerRange = [2, 4];
+        optionSpread = 18;
+    } else if (level <= 100) {
+        stages = ['preflop', 'flop', 'flop', 'turn'];
+        playerRange = [2, 5];
+        optionSpread = 15;
+    } else if (level <= 140) {
+        stages = ['flop', 'flop', 'turn', 'turn'];
+        playerRange = [3, 6];
+        optionSpread = 13;
+    } else if (level <= 180) {
         stages = ['flop', 'turn', 'turn', 'river'];
         playerRange = [3, 6];
-        optionSpread = 12;
-    } else if (level <= 80) {
+        optionSpread = 11;
+    } else if (level <= 220) {
         stages = ['flop', 'turn', 'river', 'river'];
-        playerRange = [2, 9];
+        playerRange = [2, 7];
         optionSpread = 9;
+    } else if (level <= 260) {
+        stages = ['preflop', 'flop', 'turn', 'river'];
+        playerRange = [2, 8];
+        optionSpread = 7;
     } else {
         stages = ['preflop', 'flop', 'turn', 'river'];
         playerRange = [2, 9];
-        optionSpread = 7;
+        optionSpread = 5;
     }
 
     const stage = stages[Math.floor(Math.random() * stages.length)];
@@ -93,17 +122,46 @@ function getLevelConfig(level) {
     return { stage, numPlayers, optionSpread };
 }
 
-// 针对已知对手手牌计算精确胜率（蒙特卡洛模拟剩余公牌）
+// 竞技场的难度：混合各种难度
+function getArenaConfig(questionIndex) {
+    // 10题：2简单 + 3中等 + 3困难 + 2大师
+    const configs = [
+        { stages: ['preflop', 'flop'], playerRange: [2, 3], optionSpread: 20 },
+        { stages: ['preflop', 'flop'], playerRange: [2, 4], optionSpread: 18 },
+        { stages: ['flop', 'turn'], playerRange: [2, 5], optionSpread: 14 },
+        { stages: ['flop', 'turn'], playerRange: [3, 6], optionSpread: 12 },
+        { stages: ['turn', 'river'], playerRange: [2, 6], optionSpread: 10 },
+        { stages: ['flop', 'turn', 'river'], playerRange: [3, 7], optionSpread: 9 },
+        { stages: ['turn', 'river'], playerRange: [2, 7], optionSpread: 8 },
+        { stages: ['flop', 'river'], playerRange: [3, 8], optionSpread: 7 },
+        { stages: ['preflop', 'flop', 'turn', 'river'], playerRange: [2, 9], optionSpread: 6 },
+        { stages: ['preflop', 'flop', 'turn', 'river'], playerRange: [3, 9], optionSpread: 5 },
+    ];
+    const c = configs[questionIndex] || configs[9];
+    const stage = c.stages[Math.floor(Math.random() * c.stages.length)];
+    const numPlayers = c.playerRange[0] + Math.floor(Math.random() * (c.playerRange[1] - c.playerRange[0] + 1));
+    return { stage, numPlayers, optionSpread: c.optionSpread };
+}
+
+function getDifficultyLabel(level) {
+    if (level <= 30) return { text: '入门', cls: 'diff-easy' };
+    if (level <= 60) return { text: '基础', cls: 'diff-easy' };
+    if (level <= 100) return { text: '初级', cls: 'diff-normal' };
+    if (level <= 140) return { text: '中级', cls: 'diff-medium' };
+    if (level <= 180) return { text: '进阶', cls: 'diff-medium' };
+    if (level <= 220) return { text: '高级', cls: 'diff-hard' };
+    if (level <= 260) return { text: '专家', cls: 'diff-hard' };
+    return { text: '大师', cls: 'diff-master' };
+}
+
+// ========== 核心：生成题目 ==========
+
 function simulateExact(myHand, oppHands, knownCommunity, iterations) {
     const usedCards = new Set([...myHand, ...knownCommunity]);
-    for (const opp of oppHands) {
-        usedCards.add(opp[0]);
-        usedCards.add(opp[1]);
-    }
+    for (const opp of oppHands) { usedCards.add(opp[0]); usedCards.add(opp[1]); }
     const remainDeck = buildDeck().filter(c => !usedCards.has(c));
     const communityNeeded = 5 - knownCommunity.length;
 
-    // 河牌圈不需要模拟，直接算
     if (communityNeeded === 0) {
         const myEval = evaluateHand([...myHand, ...knownCommunity]);
         let win = true, tie = false;
@@ -117,18 +175,12 @@ function simulateExact(myHand, oppHands, knownCommunity, iterations) {
     }
 
     let wins = 0, ties = 0;
-
     for (let i = 0; i < iterations; i++) {
         const deck = [...remainDeck];
         shuffle(deck);
-
         const simComm = [...knownCommunity];
-        for (let c = 0; c < communityNeeded; c++) {
-            simComm.push(deck[c]);
-        }
-
+        for (let c = 0; c < communityNeeded; c++) simComm.push(deck[c]);
         const myEval = evaluateHand([...myHand, ...simComm]);
-
         let iWin = true, isTie = false;
         for (const opp of oppHands) {
             const oppEval = evaluateHand([...opp, ...simComm]);
@@ -136,63 +188,40 @@ function simulateExact(myHand, oppHands, knownCommunity, iterations) {
             if (cmp < 0) { iWin = false; isTie = false; break; }
             else if (cmp === 0) { isTie = true; }
         }
-
         if (iWin && !isTie) wins++;
         else if (isTie && iWin) ties++;
     }
-
     return Math.round((wins / iterations) * 100);
 }
 
-// 分配位置
 function assignPositions(numPlayers) {
-    // 根据人数选择合理的位置
     let positions;
-    if (numPlayers === 2) {
-        positions = ['BTN', 'BB'];
-    } else if (numPlayers === 3) {
-        positions = ['BTN', 'SB', 'BB'];
-    } else if (numPlayers <= 6) {
-        positions = ['BTN', 'SB', 'BB', 'UTG', 'MP', 'CO'].slice(0, numPlayers);
-    } else {
-        positions = POSITION_NAMES.slice(0, numPlayers);
-    }
-    // 随机分配玩家位置
+    if (numPlayers === 2) positions = ['BTN', 'BB'];
+    else if (numPlayers === 3) positions = ['BTN', 'SB', 'BB'];
+    else if (numPlayers <= 6) positions = ['BTN', 'SB', 'BB', 'UTG', 'MP', 'CO'].slice(0, numPlayers);
+    else positions = POSITION_NAMES.slice(0, numPlayers);
     const shuffled = [...positions];
     shuffle(shuffled);
     return { playerPos: shuffled[0], oppPositions: shuffled.slice(1) };
 }
 
-// 生成一关的题目
-function generateLevel(level) {
-    const config = getLevelConfig(level);
+function generateQuestion(config) {
     const deck = buildDeck();
     shuffle(deck);
-
     let idx = 0;
 
-    // 发手牌
     const hand = [deck[idx++], deck[idx++]];
-
-    // 发对手手牌
     const numOpponents = config.numPlayers - 1;
     const opponents = [];
     const { playerPos, oppPositions } = assignPositions(config.numPlayers);
 
     for (let i = 0; i < numOpponents; i++) {
-        opponents.push({
-            position: oppPositions[i],
-            cards: [deck[idx++], deck[idx++]]
-        });
+        opponents.push({ position: oppPositions[i], cards: [deck[idx++], deck[idx++]] });
     }
 
-    // 发完整5张公牌
     const fullCommunity = [];
-    for (let i = 0; i < 5; i++) {
-        fullCommunity.push(deck[idx++]);
-    }
+    for (let i = 0; i < 5; i++) fullCommunity.push(deck[idx++]);
 
-    // 根据阶段截取可见公牌
     let commCount = 0;
     switch (config.stage) {
         case 'preflop': commCount = 0; break;
@@ -202,87 +231,54 @@ function generateLevel(level) {
     }
     const community = fullCommunity.slice(0, commCount);
 
-    // 计算精确胜率（多轮模拟取平均，减少波动）
     const oppHands = opponents.map(o => o.cards);
-    const runs = 3;
-    const iterPerRun = 20000;
+    const runs = 3, iterPerRun = 20000;
     let totalRate = 0;
-    for (let r = 0; r < runs; r++) {
-        totalRate += simulateExact(hand, oppHands, community, iterPerRun);
-    }
+    for (let r = 0; r < runs; r++) totalRate += simulateExact(hand, oppHands, community, iterPerRun);
     const correctRate = Math.round(totalRate / runs);
 
-    // 计算对手牌型（基于当前可见公牌）
     for (const opp of opponents) {
         if (community.length > 0) {
-            const allCards = [...opp.cards, ...community];
-            const eval_ = evaluateHand(allCards);
+            const eval_ = evaluateHand([...opp.cards, ...community]);
             opp.handType = HAND_NAMES[eval_[0]];
         } else {
             opp.handType = null;
         }
     }
 
-    // 生成4个选项
     const options = generateOptions(correctRate, config.optionSpread);
 
-    challengeState.handCards = hand;
-    challengeState.communityCards = community;
-    challengeState.fullCommunity = fullCommunity;
-    challengeState.stage = config.stage;
-    challengeState.numPlayers = config.numPlayers;
-    challengeState.playerPosition = playerPos;
-    challengeState.opponents = opponents;
-    challengeState.correctWinRate = correctRate;
-    challengeState.options = options;
-    challengeState.answered = false;
-    challengeState.selectedOption = -1;
+    return { hand, community, fullCommunity, stage: config.stage, numPlayers: config.numPlayers,
+        playerPos, opponents, correctRate, options };
 }
 
-// 生成4个选项，其中一个是正确答案
 function generateOptions(correctRate, spread) {
     const options = [];
     const correctIdx = Math.floor(Math.random() * 4);
-
     for (let i = 0; i < 4; i++) {
         if (i === correctIdx) {
             options.push({ rate: correctRate, isCorrect: true });
         } else {
-            let fakeRate;
-            let attempts = 0;
+            let fakeRate, attempts = 0;
             do {
                 const offset = (Math.random() * spread * 2 + spread) * (Math.random() < 0.5 ? -1 : 1);
                 fakeRate = Math.round(correctRate + offset);
                 fakeRate = Math.max(1, Math.min(99, fakeRate));
                 attempts++;
-            } while (
-                attempts < 50 &&
-                (Math.abs(fakeRate - correctRate) < spread * 0.5 ||
-                 options.some(o => Math.abs(o.rate - fakeRate) < spread * 0.4))
-            );
+            } while (attempts < 50 && (Math.abs(fakeRate - correctRate) < spread * 0.5 ||
+                options.some(o => Math.abs(o.rate - fakeRate) < spread * 0.4)));
             options.push({ rate: fakeRate, isCorrect: false });
         }
     }
-
     return options;
 }
 
-// 获取阶段中文名
 function getStageName(stage) {
-    const names = { preflop: '翻牌前', flop: '翻牌圈', turn: '转牌圈', river: '河牌圈' };
-    return names[stage] || stage;
+    return { preflop: '翻牌前', flop: '翻牌圈', turn: '转牌圈', river: '河牌圈' }[stage] || stage;
 }
 
-// 获取难度标签
-function getDifficultyLabel(level) {
-    if (level <= 20) return { text: '入门', cls: 'diff-easy' };
-    if (level <= 40) return { text: '初级', cls: 'diff-normal' };
-    if (level <= 60) return { text: '中级', cls: 'diff-medium' };
-    if (level <= 80) return { text: '高级', cls: 'diff-hard' };
-    return { text: '大师', cls: 'diff-master' };
-}
+// ========== UI 工具 ==========
 
-// 生成一张牌的HTML
 function cardHTML(card, small) {
     const { rank, suit } = parseCard(card);
     const isRed = suit === 'h' || suit === 'd';
@@ -293,26 +289,327 @@ function cardHTML(card, small) {
     </div>`;
 }
 
-// 生成牌背HTML
 function cardBackHTML() {
-    return `<div class="ch-card ch-card-sm ch-card-back">
-        <span class="ch-card-back-icon">?</span>
-    </div>`;
+    return `<div class="ch-card ch-card-sm ch-card-back"><span class="ch-card-back-icon">?</span></div>`;
 }
 
-// ========== UI 渲染 ==========
+function renderQuestionUI(state, prefix) {
+    document.getElementById(prefix + 'Stage').textContent = getStageName(state.stage);
+    document.getElementById(prefix + 'Players').textContent = state.numPlayers + ' 人';
 
-function showChallengeMode() {
+    // 手牌
+    document.getElementById(prefix + 'HandCards').innerHTML = state.handCards.map(c => cardHTML(c, false)).join('');
+    document.getElementById(prefix + 'PlayerPos').textContent =
+        state.playerPosition + ' (' + POSITION_FULL_NAMES[state.playerPosition] + ')';
+
+    // 公牌
+    const commEl = document.getElementById(prefix + 'CommCards');
+    if (state.communityCards.length === 0) {
+        commEl.innerHTML = '<div class="ch-no-comm">无公牌（翻牌前）</div>';
+    } else {
+        commEl.innerHTML = state.communityCards.map(c => cardHTML(c, false)).join('');
+    }
+
+    // 当前牌型
+    const handTypeEl = document.getElementById(prefix + 'HandType');
+    if (state.communityCards.length > 0) {
+        const eval_ = evaluateHand([...state.handCards, ...state.communityCards]);
+        handTypeEl.textContent = '当前牌型：' + HAND_NAMES[eval_[0]];
+        handTypeEl.style.display = 'block';
+    } else {
+        handTypeEl.style.display = 'none';
+    }
+
+    // 对手
+    renderOpponentsUI(state.opponents, false, prefix + 'Opponents');
+
+    // 选项
+    const optContainer = document.getElementById(prefix + 'Options');
+    optContainer.innerHTML = state.options.map((opt, idx) => {
+        const fn = prefix === 'arena' ? 'selectArenaOption' : 'selectChallengeOption';
+        return `<button class="ch-option" id="${prefix}Opt${idx}" onclick="${fn}(${idx})">
+            <span class="ch-option-label">选项 ${['A', 'B', 'C', 'D'][idx]}</span>
+            <span class="ch-option-rate">${opt.rate}%</span>
+        </button>`;
+    }).join('');
+
+    document.getElementById(prefix + 'Result').style.display = 'none';
+}
+
+function renderOpponentsUI(opponents, revealed, containerId) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = opponents.map(opp => {
+        const posName = POSITION_FULL_NAMES[opp.position] || opp.position;
+        let cardsHtml, typeHtml = '';
+        if (revealed) {
+            cardsHtml = opp.cards.map(c => cardHTML(c, true)).join('');
+            if (opp.handType) typeHtml = `<span class="ch-opp-handtype">${opp.handType}</span>`;
+        } else {
+            cardsHtml = cardBackHTML() + cardBackHTML();
+        }
+        return `<div class="ch-opponent">
+            <div class="ch-opp-pos">${opp.position} <span class="ch-opp-pos-name">${posName}</span></div>
+            <div class="ch-opp-cards">${cardsHtml}</div>
+            ${typeHtml}
+        </div>`;
+    }).join('');
+}
+
+function showAnswerResult(state, idx, prefix) {
+    const selected = state.options[idx];
+    const isCorrect = selected.isCorrect;
+
+    state.options.forEach((opt, i) => {
+        const el = document.getElementById(prefix + 'Opt' + i);
+        if (opt.isCorrect) el.classList.add('ch-option-correct');
+        if (i === idx && !isCorrect) el.classList.add('ch-option-wrong');
+        el.disabled = true;
+    });
+
+    renderOpponentsUI(state.opponents, true, prefix + 'Opponents');
+
+    const resultEl = document.getElementById(prefix + 'Result');
+    resultEl.style.display = 'block';
+    if (isCorrect) {
+        resultEl.innerHTML = `<div class="ch-result-correct">
+            <div class="ch-result-icon">&#10004;</div>
+            <div class="ch-result-text">回答正确！</div>
+            <div class="ch-result-detail">实际胜率: ${state.correctWinRate}%</div>
+        </div>`;
+    } else {
+        resultEl.innerHTML = `<div class="ch-result-wrong">
+            <div class="ch-result-icon">&#10008;</div>
+            <div class="ch-result-text">回答错误</div>
+            <div class="ch-result-detail">你选了 ${selected.rate}%，实际胜率: ${state.correctWinRate}%</div>
+        </div>`;
+    }
+
+    return isCorrect;
+}
+
+// ========== 页面导航 ==========
+
+function showHomeMode() {
+    document.getElementById('homeApp').style.display = 'block';
     document.getElementById('app').style.display = 'none';
+    document.getElementById('challengeApp').style.display = 'none';
+    document.getElementById('arenaApp').style.display = 'none';
+    updateHomeStats();
+}
+
+function showCalculatorMode() {
+    document.getElementById('homeApp').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('challengeApp').style.display = 'none';
+    document.getElementById('arenaApp').style.display = 'none';
+}
+
+function showCampaignMode() {
+    document.getElementById('homeApp').style.display = 'none';
     document.getElementById('challengeApp').style.display = 'block';
+    document.getElementById('arenaApp').style.display = 'none';
+    document.getElementById('app').style.display = 'none';
     loadChallengeProgress();
     renderChallengeLevel();
 }
 
-function showCalculatorMode() {
-    document.getElementById('app').style.display = 'block';
-    document.getElementById('challengeApp').style.display = 'none';
+function updateHomeStats() {
+    loadChallengeProgress();
+    const el = document.getElementById('campaignProgress');
+    if (el) el.textContent = `${challengeState.completed.length}/${TOTAL_LEVELS}`;
+
+    const statsEl = document.getElementById('homeStats');
+    const best = loadArenaBest();
+    if (best) {
+        const eval_ = getArenaEvaluation(best.score);
+        statsEl.innerHTML = `
+            <div class="home-best-card">
+                <div class="home-best-title">竞技场最佳</div>
+                <div class="home-best-row">
+                    <span class="home-best-grade ${eval_.gradeClass}">${eval_.grade}</span>
+                    <span class="home-best-score">${best.score}/${ARENA_QUESTIONS} 正确</span>
+                    <span class="home-best-label">${eval_.title}</span>
+                </div>
+            </div>`;
+    } else {
+        statsEl.innerHTML = '';
+    }
 }
+
+// ========== 竞技场模式 ==========
+
+function startArena() {
+    arenaState = {
+        currentQ: 0, score: 0, results: [],
+        handCards: [], communityCards: [], fullCommunity: [],
+        stage: '', numPlayers: 2, playerPosition: '',
+        opponents: [], correctWinRate: 0, options: [],
+        answered: false, selectedOption: -1
+    };
+
+    document.getElementById('homeApp').style.display = 'none';
+    document.getElementById('arenaApp').style.display = 'block';
+    document.getElementById('arenaContent').style.display = 'block';
+    document.getElementById('arenaResultPage').style.display = 'none';
+
+    renderArenaQuestion();
+}
+
+function exitArena() {
+    showHomeMode();
+}
+
+function renderArenaQuestion() {
+    if (arenaState.currentQ >= ARENA_QUESTIONS) {
+        showArenaResult();
+        return;
+    }
+
+    const config = getArenaConfig(arenaState.currentQ);
+    const q = generateQuestion(config);
+
+    arenaState.handCards = q.hand;
+    arenaState.communityCards = q.community;
+    arenaState.fullCommunity = q.fullCommunity;
+    arenaState.stage = q.stage;
+    arenaState.numPlayers = q.numPlayers;
+    arenaState.playerPosition = q.playerPos;
+    arenaState.opponents = q.opponents;
+    arenaState.correctWinRate = q.correctRate;
+    arenaState.options = q.options;
+    arenaState.answered = false;
+    arenaState.selectedOption = -1;
+
+    document.getElementById('arenaProgress').textContent = `${arenaState.currentQ + 1}/${ARENA_QUESTIONS}`;
+
+    // 进度点
+    const dotsHtml = Array.from({ length: ARENA_QUESTIONS }, (_, i) => {
+        let cls = 'arena-dot';
+        if (i < arenaState.results.length) {
+            cls += arenaState.results[i] ? ' dot-correct' : ' dot-wrong';
+        } else if (i === arenaState.currentQ) {
+            cls += ' dot-current';
+        }
+        return `<span class="${cls}"></span>`;
+    }).join('');
+    document.getElementById('arenaDots').innerHTML = dotsHtml;
+
+    renderQuestionUI(arenaState, 'arena');
+    document.getElementById('arenaNextBtn').style.display = 'none';
+}
+
+function selectArenaOption(idx) {
+    if (arenaState.answered) return;
+    arenaState.answered = true;
+    arenaState.selectedOption = idx;
+
+    const isCorrect = showAnswerResult(arenaState, idx, 'arena');
+    if (isCorrect) arenaState.score++;
+    arenaState.results.push(isCorrect);
+
+    // 更新点
+    const dots = document.getElementById('arenaDots').children;
+    const dotIdx = arenaState.currentQ;
+    if (dots[dotIdx]) {
+        dots[dotIdx].className = 'arena-dot ' + (isCorrect ? 'dot-correct' : 'dot-wrong');
+    }
+
+    document.getElementById('arenaNextBtn').style.display = 'block';
+    document.getElementById('arenaNextBtn').textContent =
+        arenaState.currentQ + 1 >= ARENA_QUESTIONS ? '查看结果' : '下一题 →';
+}
+
+function nextArenaQuestion() {
+    arenaState.currentQ++;
+    renderArenaQuestion();
+    document.getElementById('arenaApp').scrollTo(0, 0);
+}
+
+function getArenaEvaluation(score) {
+    const pct = (score / ARENA_QUESTIONS) * 100;
+    if (pct >= 90) return { grade: 'S', gradeClass: 'grade-s', title: '扑克大师', desc: '你对胜率的直觉非常精准，可以在高级牌局中自信决策！' };
+    if (pct >= 80) return { grade: 'A', gradeClass: 'grade-a', title: '高手玩家', desc: '你对牌面局势有很强的判断力，继续保持！' };
+    if (pct >= 70) return { grade: 'B', gradeClass: 'grade-b', title: '进阶玩家', desc: '你已经能较准确地判断胜率，多加练习会更好。' };
+    if (pct >= 50) return { grade: 'C', gradeClass: 'grade-c', title: '业余玩家', desc: '胜率判断还有提升空间，建议多玩闯关模式练习。' };
+    if (pct >= 30) return { grade: 'D', gradeClass: 'grade-d', title: '新手上路', desc: '胜率估算偏差较大，通过闯关模式逐步提升吧！' };
+    return { grade: 'F', gradeClass: 'grade-d', title: '萌新阶段', desc: '别灰心！扑克直觉需要积累，多练习就会进步。' };
+}
+
+function showArenaResult() {
+    document.getElementById('arenaContent').style.display = 'none';
+    document.getElementById('arenaResultPage').style.display = 'block';
+
+    const eval_ = getArenaEvaluation(arenaState.score);
+    const pct = Math.round((arenaState.score / ARENA_QUESTIONS) * 100);
+
+    saveArenaBest({ score: arenaState.score, date: new Date().toISOString() });
+
+    const dotsHtml = arenaState.results.map((r, i) =>
+        `<span class="arena-dot-lg ${r ? 'dot-correct' : 'dot-wrong'}">${i + 1}</span>`
+    ).join('');
+
+    document.getElementById('arenaResultPage').innerHTML = `
+        <div class="arena-result-container">
+            <div class="arena-result-grade ${eval_.gradeClass}">${eval_.grade}</div>
+            <div class="arena-result-title">${eval_.title}</div>
+            <div class="arena-result-desc">${eval_.desc}</div>
+            <div class="arena-result-stats">
+                <div class="ch-stat"><div class="ch-stat-num">${arenaState.score}</div><div class="ch-stat-label">答对</div></div>
+                <div class="ch-stat"><div class="ch-stat-num">${ARENA_QUESTIONS - arenaState.score}</div><div class="ch-stat-label">答错</div></div>
+                <div class="ch-stat"><div class="ch-stat-num">${pct}%</div><div class="ch-stat-label">正确率</div></div>
+            </div>
+            <div class="arena-result-dots">${dotsHtml}</div>
+            <button class="arena-share-btn" onclick="shareArenaResult()">📤 分享成绩</button>
+            <button class="ch-restart-btn" onclick="startArena()">再来一局</button>
+            <button class="ch-back-btn" onclick="showHomeMode()">返回首页</button>
+        </div>
+    `;
+}
+
+function shareArenaResult() {
+    const eval_ = getArenaEvaluation(arenaState.score);
+    const pct = Math.round((arenaState.score / ARENA_QUESTIONS) * 100);
+    const dots = arenaState.results.map(r => r ? '🟢' : '🔴').join('');
+
+    const text = `🃏 德州扑克训练营 - 竞技场\n` +
+        `评级: ${eval_.grade} - ${eval_.title}\n` +
+        `得分: ${arenaState.score}/${ARENA_QUESTIONS} (${pct}%)\n` +
+        `${dots}\n` +
+        `来挑战你的扑克直觉吧！`;
+
+    if (navigator.share) {
+        navigator.share({ title: '德州扑克训练营', text: text }).catch(() => {
+            copyToClipboard(text);
+        });
+    } else {
+        copyToClipboard(text);
+    }
+}
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        const btn = document.querySelector('.arena-share-btn');
+        if (btn) {
+            btn.textContent = '✅ 已复制到剪贴板';
+            setTimeout(() => { btn.textContent = '📤 分享成绩'; }, 2000);
+        }
+    }).catch(() => {
+        // Fallback
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        const btn = document.querySelector('.arena-share-btn');
+        if (btn) {
+            btn.textContent = '✅ 已复制到剪贴板';
+            setTimeout(() => { btn.textContent = '📤 分享成绩'; }, 2000);
+        }
+    });
+}
+
+// ========== 闯关模式 ==========
 
 function renderChallengeLevel() {
     if (challengeState.currentLevel > TOTAL_LEVELS) {
@@ -320,7 +617,20 @@ function renderChallengeLevel() {
         return;
     }
 
-    generateLevel(challengeState.currentLevel);
+    const config = getLevelConfig(challengeState.currentLevel);
+    const q = generateQuestion(config);
+
+    challengeState.handCards = q.hand;
+    challengeState.communityCards = q.community;
+    challengeState.fullCommunity = q.fullCommunity;
+    challengeState.stage = q.stage;
+    challengeState.numPlayers = q.numPlayers;
+    challengeState.playerPosition = q.playerPos;
+    challengeState.opponents = q.opponents;
+    challengeState.correctWinRate = q.correctRate;
+    challengeState.options = q.options;
+    challengeState.answered = false;
+    challengeState.selectedOption = -1;
 
     const diff = getDifficultyLabel(challengeState.currentLevel);
 
@@ -333,93 +643,19 @@ function renderChallengeLevel() {
     document.getElementById('challengeProgressFill').style.width = progressPct + '%';
     document.getElementById('challengeProgressText').textContent = `${challengeState.currentLevel - 1}/${TOTAL_LEVELS}`;
 
-    document.getElementById('challengeStage').textContent = getStageName(challengeState.stage);
-    document.getElementById('challengePlayers').textContent = challengeState.numPlayers + ' 人';
-
-    renderChallengeCards();
-    renderOpponents(false);
-    renderChallengeOptions();
-
-    document.getElementById('challengeResult').style.display = 'none';
+    renderQuestionUI(challengeState, 'challenge');
     document.getElementById('challengeNextBtn').style.display = 'none';
-}
-
-function renderChallengeCards() {
-    // 玩家手牌
-    const handContainer = document.getElementById('challengeHandCards');
-    handContainer.innerHTML = challengeState.handCards.map(c => cardHTML(c, false)).join('');
-
-    // 玩家位置
-    document.getElementById('challengePlayerPos').textContent =
-        challengeState.playerPosition + ' (' + POSITION_FULL_NAMES[challengeState.playerPosition] + ')';
-
-    // 公牌
-    const commContainer = document.getElementById('challengeCommCards');
-    if (challengeState.communityCards.length === 0) {
-        commContainer.innerHTML = '<div class="ch-no-comm">无公牌（翻牌前）</div>';
-    } else {
-        commContainer.innerHTML = challengeState.communityCards.map(c => cardHTML(c, false)).join('');
-    }
-
-    // 当前牌型
-    const handTypeEl = document.getElementById('challengeHandType');
-    if (challengeState.communityCards.length > 0) {
-        const allCards = [...challengeState.handCards, ...challengeState.communityCards];
-        const eval_ = evaluateHand(allCards);
-        handTypeEl.textContent = '当前牌型：' + HAND_NAMES[eval_[0]];
-        handTypeEl.style.display = 'block';
-    } else {
-        handTypeEl.style.display = 'none';
-    }
-}
-
-function renderOpponents(revealed) {
-    const container = document.getElementById('challengeOpponents');
-    const opps = challengeState.opponents;
-
-    container.innerHTML = opps.map((opp, i) => {
-        const posName = POSITION_FULL_NAMES[opp.position] || opp.position;
-        let cardsHtml, typeHtml = '';
-
-        if (revealed) {
-            cardsHtml = opp.cards.map(c => cardHTML(c, true)).join('');
-            if (opp.handType) {
-                typeHtml = `<span class="ch-opp-handtype">${opp.handType}</span>`;
-            }
-        } else {
-            cardsHtml = cardBackHTML() + cardBackHTML();
-        }
-
-        return `<div class="ch-opponent">
-            <div class="ch-opp-pos">${opp.position} <span class="ch-opp-pos-name">${posName}</span></div>
-            <div class="ch-opp-cards">${cardsHtml}</div>
-            ${typeHtml}
-        </div>`;
-    }).join('');
-}
-
-function renderChallengeOptions() {
-    const container = document.getElementById('challengeOptions');
-    container.innerHTML = challengeState.options.map((opt, idx) => {
-        return `<button class="ch-option" id="chOpt${idx}" onclick="selectChallengeOption(${idx})">
-            <span class="ch-option-label">选项 ${['A', 'B', 'C', 'D'][idx]}</span>
-            <span class="ch-option-rate">${opt.rate}%</span>
-        </button>`;
-    }).join('');
 }
 
 function selectChallengeOption(idx) {
     if (challengeState.answered) return;
-
     challengeState.answered = true;
     challengeState.selectedOption = idx;
 
     const selected = challengeState.options[idx];
-    const isCorrect = selected.isCorrect;
+    const isCorrect = showAnswerResult(challengeState, idx, 'challenge');
 
-    if (isCorrect) {
-        challengeState.score++;
-    }
+    if (isCorrect) challengeState.score++;
 
     challengeState.completed.push({
         level: challengeState.currentLevel,
@@ -429,38 +665,6 @@ function selectChallengeOption(idx) {
     });
 
     saveChallengeProgress();
-
-    // 高亮选项
-    challengeState.options.forEach((opt, i) => {
-        const el = document.getElementById('chOpt' + i);
-        if (opt.isCorrect) el.classList.add('ch-option-correct');
-        if (i === idx && !isCorrect) el.classList.add('ch-option-wrong');
-        el.disabled = true;
-    });
-
-    // 翻开对手手牌
-    renderOpponents(true);
-
-    // 显示结果
-    const resultEl = document.getElementById('challengeResult');
-    resultEl.style.display = 'block';
-
-    if (isCorrect) {
-        resultEl.innerHTML = `
-            <div class="ch-result-correct">
-                <div class="ch-result-icon">&#10004;</div>
-                <div class="ch-result-text">回答正确！</div>
-                <div class="ch-result-detail">实际胜率: ${challengeState.correctWinRate}%</div>
-            </div>`;
-    } else {
-        resultEl.innerHTML = `
-            <div class="ch-result-wrong">
-                <div class="ch-result-icon">&#10008;</div>
-                <div class="ch-result-text">回答错误</div>
-                <div class="ch-result-detail">你选了 ${selected.rate}%，实际胜率: ${challengeState.correctWinRate}%</div>
-            </div>`;
-    }
-
     document.getElementById('challengeNextBtn').style.display = 'block';
     document.getElementById('challengeScore').textContent = `${challengeState.score}/${challengeState.completed.length}`;
 }
@@ -473,52 +677,31 @@ function nextChallengeLevel() {
 }
 
 function renderChallengeComplete() {
-    const container = document.getElementById('challengeApp');
     const accuracy = challengeState.completed.length > 0
         ? Math.round((challengeState.score / challengeState.completed.length) * 100) : 0;
+    const eval_ = getArenaEvaluation(Math.round(challengeState.score / challengeState.completed.length * ARENA_QUESTIONS));
 
-    let grade, gradeClass;
-    if (accuracy >= 90) { grade = 'S'; gradeClass = 'grade-s'; }
-    else if (accuracy >= 80) { grade = 'A'; gradeClass = 'grade-a'; }
-    else if (accuracy >= 70) { grade = 'B'; gradeClass = 'grade-b'; }
-    else if (accuracy >= 60) { grade = 'C'; gradeClass = 'grade-c'; }
-    else { grade = 'D'; gradeClass = 'grade-d'; }
-
-    container.innerHTML = `
-        <header class="header">
-            <button class="header-btn" onclick="showCalculatorMode()">&#8592; 计算器</button>
-            <h1>闯关完成！</h1>
-            <div style="width:60px"></div>
-        </header>
+    const content = document.getElementById('challengeLevelContent');
+    content.innerHTML = `
         <div class="ch-complete">
-            <div class="ch-complete-grade ${gradeClass}">${grade}</div>
-            <div class="ch-complete-title">恭喜通关！</div>
+            <div class="ch-complete-grade ${eval_.gradeClass}">${eval_.grade}</div>
+            <div class="ch-complete-title">恭喜通关 ${TOTAL_LEVELS} 关！</div>
             <div class="ch-complete-stats">
-                <div class="ch-stat">
-                    <div class="ch-stat-num">${challengeState.score}</div>
-                    <div class="ch-stat-label">答对</div>
-                </div>
-                <div class="ch-stat">
-                    <div class="ch-stat-num">${challengeState.completed.length - challengeState.score}</div>
-                    <div class="ch-stat-label">答错</div>
-                </div>
-                <div class="ch-stat">
-                    <div class="ch-stat-num">${accuracy}%</div>
-                    <div class="ch-stat-label">正确率</div>
-                </div>
+                <div class="ch-stat"><div class="ch-stat-num">${challengeState.score}</div><div class="ch-stat-label">答对</div></div>
+                <div class="ch-stat"><div class="ch-stat-num">${challengeState.completed.length - challengeState.score}</div><div class="ch-stat-label">答错</div></div>
+                <div class="ch-stat"><div class="ch-stat-num">${accuracy}%</div><div class="ch-stat-label">正确率</div></div>
             </div>
             <button class="ch-restart-btn" onclick="restartChallenge()">重新挑战</button>
-            <button class="ch-back-btn" onclick="showCalculatorMode()">返回计算器</button>
+            <button class="ch-back-btn" onclick="showHomeMode()">返回首页</button>
         </div>
     `;
 }
 
 function restartChallenge() {
     resetChallengeProgress();
-    showChallengeMode();
+    showCampaignMode();
 }
 
-// 闯关关卡选择
 function showLevelSelect() {
     document.getElementById('challengeLevelContent').style.display = 'none';
     document.getElementById('challengeLevelSelect').style.display = 'block';
@@ -544,9 +727,7 @@ function renderLevelSelect() {
         if (done && correct) cls += ' lvl-correct';
         else if (done && !correct) cls += ' lvl-wrong';
         if (isCurrent) cls += ' lvl-current';
-
-        const diff = getDifficultyLabel(i);
-        html += `<button class="${cls}" onclick="jumpToLevel(${i})" title="${diff.text}">${i}</button>`;
+        html += `<button class="${cls}" onclick="jumpToLevel(${i})" title="${getDifficultyLabel(i).text}">${i}</button>`;
     }
     grid.innerHTML = html;
 }

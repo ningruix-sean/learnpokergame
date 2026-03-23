@@ -21,6 +21,7 @@ const RANGE_NAMES = {
 document.addEventListener('DOMContentLoaded', () => {
     renderAllCards();
     buildCardGrid();
+    updateHomeStats();
 });
 
 // ========== Card Display ==========
