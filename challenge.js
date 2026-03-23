@@ -103,13 +103,25 @@ function simulateExact(myHand, oppHands, knownCommunity, iterations) {
     const remainDeck = buildDeck().filter(c => !usedCards.has(c));
     const communityNeeded = 5 - knownCommunity.length;
 
+    // 河牌圈不需要模拟，直接算
+    if (communityNeeded === 0) {
+        const myEval = evaluateHand([...myHand, ...knownCommunity]);
+        let win = true, tie = false;
+        for (const opp of oppHands) {
+            const oppEval = evaluateHand([...opp, ...knownCommunity]);
+            const cmp = compareHands(myEval, oppEval);
+            if (cmp < 0) { return 0; }
+            else if (cmp === 0) { tie = true; }
+        }
+        return win && !tie ? 100 : (tie ? 50 : 0);
+    }
+
     let wins = 0, ties = 0;
 
     for (let i = 0; i < iterations; i++) {
         const deck = [...remainDeck];
         shuffle(deck);
 
-        // 补全公牌
         const simComm = [...knownCommunity];
         for (let c = 0; c < communityNeeded; c++) {
             simComm.push(deck[c]);
@@ -190,9 +202,15 @@ function generateLevel(level) {
     }
     const community = fullCommunity.slice(0, commCount);
 
-    // 计算精确胜率
+    // 计算精确胜率（多轮模拟取平均，减少波动）
     const oppHands = opponents.map(o => o.cards);
-    const correctRate = simulateExact(hand, oppHands, community, 10000);
+    const runs = 3;
+    const iterPerRun = 20000;
+    let totalRate = 0;
+    for (let r = 0; r < runs; r++) {
+        totalRate += simulateExact(hand, oppHands, community, iterPerRun);
+    }
+    const correctRate = Math.round(totalRate / runs);
 
     // 计算对手牌型（基于当前可见公牌）
     for (const opp of opponents) {
