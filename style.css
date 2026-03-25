@@ -941,6 +941,90 @@ body {
     background: linear-gradient(90deg, #b71c1c, #e53935) !important;
 }
 
+/* ========== Review / Wrong Book Mode ========== */
+
+.review-card {
+    background: linear-gradient(135deg, #e65100, #ff8f00);
+    color: white;
+}
+
+.header-review {
+    background: #e65100;
+}
+
+.review-progress-fill {
+    background: linear-gradient(90deg, #e65100, #ff8f00) !important;
+}
+
+.review-source-badge {
+    font-size: 11px;
+    color: var(--text-light);
+    background: #f5f5f5;
+    padding: 2px 8px;
+    border-radius: 10px;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Review List */
+.review-list-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.review-item-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.review-item-hand {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 2px;
+}
+
+.review-item-info {
+    font-size: 12px;
+    color: var(--text-light);
+}
+
+.review-item-source {
+    font-size: 11px;
+    color: var(--orange);
+    margin-top: 2px;
+}
+
+.review-item-del {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+    cursor: pointer;
+    color: var(--text-light);
+    flex-shrink: 0;
+}
+
+.review-item-del:active {
+    background: #ffebee;
+    color: var(--red);
+    border-color: var(--red);
+}
+
+.review-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-light);
+    font-size: 15px;
+}
+
 /* ========== Challenge Mode ========== */
 
 /* Info Bar */

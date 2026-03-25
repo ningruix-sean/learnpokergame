@@ -1,8 +1,9 @@
-// challenge.js - 闯关模式 + 竞技场模式 + 经典案例模式
+// challenge.js - 闯关模式 + 竞技场模式 + 经典案例模式 + 错题本
 
 const CHALLENGE_STORAGE_KEY = 'poker_challenge_progress';
 const ARENA_STORAGE_KEY = 'poker_arena_best';
 const CLASSIC_STORAGE_KEY = 'poker_classic_progress';
+const WRONG_BOOK_KEY = 'poker_wrong_book';
 const TOTAL_LEVELS = 300;
 const ARENA_QUESTIONS = 10;
 
@@ -114,6 +115,75 @@ function resetClassicProgress() {
     classicState.score = 0;
     classicState.completed = [];
     saveClassicProgress();
+}
+
+// ========== 错题本存储 ==========
+
+let reviewState = {
+    questions: [],   // 错题列表
+    currentIdx: 0,
+    score: 0,
+    total: 0,
+    // 当前题目状态
+    handCards: [], communityCards: [], fullCommunity: [],
+    stage: '', numPlayers: 2, playerPosition: '',
+    opponents: [], correctWinRate: 0, options: [],
+    answered: false, selectedOption: -1,
+    source: ''       // 来源描述
+};
+
+function loadWrongBook() {
+    try {
+        const saved = localStorage.getItem(WRONG_BOOK_KEY);
+        return saved ? JSON.parse(saved) : [];
+    } catch (e) { return []; }
+}
+
+function saveWrongBook(book) {
+    try {
+        localStorage.setItem(WRONG_BOOK_KEY, JSON.stringify(book));
+    } catch (e) { /* ignore */ }
+}
+
+function addToWrongBook(entry) {
+    const book = loadWrongBook();
+    // 避免重复：用 source+handCards 做简单去重
+    const key = entry.source + entry.handCards.join('');
+    const exists = book.some(b => b.source + b.handCards.join('') === key);
+    if (!exists) {
+        book.push(entry);
+        // 最多保留200条
+        if (book.length > 200) book.splice(0, book.length - 200);
+        saveWrongBook(book);
+    }
+}
+
+function removeFromWrongBook(index) {
+    const book = loadWrongBook();
+    if (index >= 0 && index < book.length) {
+        book.splice(index, 1);
+        saveWrongBook(book);
+    }
+}
+
+function clearWrongBook() {
+    saveWrongBook([]);
+}
+
+// 从当前状态生成错题记录
+function buildWrongEntry(state, source) {
+    return {
+        source: source,
+        handCards: state.handCards,
+        communityCards: state.communityCards,
+        stage: state.stage,
+        numPlayers: state.numPlayers,
+        playerPosition: state.playerPosition,
+        opponents: state.opponents.map(o => ({ position: o.position, cards: o.cards })),
+        correctWinRate: state.correctWinRate,
+        playerAnswer: state.options[state.selectedOption]?.rate,
+        timestamp: Date.now()
+    };
 }
 
 // ========== 难度配置（300关） ==========
@@ -365,7 +435,7 @@ function renderQuestionUI(state, prefix) {
     // 选项
     const optContainer = document.getElementById(prefix + 'Options');
     optContainer.innerHTML = state.options.map((opt, idx) => {
-        const fnMap = { arena: 'selectArenaOption', challenge: 'selectChallengeOption', classic: 'selectClassicOption' };
+        const fnMap = { arena: 'selectArenaOption', challenge: 'selectChallengeOption', classic: 'selectClassicOption', review: 'selectReviewOption' };
         const fn = fnMap[prefix] || 'selectChallengeOption';
         return `<button class="ch-option" id="${prefix}Opt${idx}" onclick="${fn}(${idx})">
             <span class="ch-option-label">选项 ${['A', 'B', 'C', 'D'][idx]}</span>
@@ -435,6 +505,7 @@ function showHomeMode() {
     document.getElementById('challengeApp').style.display = 'none';
     document.getElementById('arenaApp').style.display = 'none';
     document.getElementById('classicApp').style.display = 'none';
+    document.getElementById('reviewApp').style.display = 'none';
     updateHomeStats();
 }
 
@@ -468,6 +539,18 @@ function updateHomeStats() {
         } else {
             classicTag.textContent = `${CLASSIC_HANDS.length}题`;
         }
+    }
+
+    // 错题本数量
+    const wrongBook = loadWrongBook();
+    const wrongTag = document.getElementById('wrongBookTag');
+    if (wrongTag) {
+        wrongTag.textContent = wrongBook.length > 0 ? `${wrongBook.length}题` : '空';
+    }
+    // 错题本卡片显示/隐藏
+    const wrongCard = document.getElementById('wrongBookCard');
+    if (wrongCard) {
+        wrongCard.style.display = wrongBook.length > 0 ? '' : 'none';
     }
 
     const statsEl = document.getElementById('homeStats');
@@ -557,6 +640,7 @@ function selectArenaOption(idx) {
 
     const isCorrect = showAnswerResult(arenaState, idx, 'arena');
     if (isCorrect) arenaState.score++;
+    else addToWrongBook(buildWrongEntry(arenaState, '竞技场'));
     arenaState.results.push(isCorrect);
 
     // 更新点
@@ -708,6 +792,7 @@ function selectChallengeOption(idx) {
     const isCorrect = showAnswerResult(challengeState, idx, 'challenge');
 
     if (isCorrect) challengeState.score++;
+    else addToWrongBook(buildWrongEntry(challengeState, '闯关第' + challengeState.currentLevel + '关'));
 
     challengeState.completed.push({
         level: challengeState.currentLevel,
@@ -883,6 +968,7 @@ function selectClassicOption(idx) {
     document.getElementById('classicTournamentInfo').classList.add('revealed');
 
     if (isCorrect) classicState.score++;
+    else addToWrongBook(buildWrongEntry(classicState, '经典案例: ' + classicState.currentHand.tournament));
 
     classicState.completed.push({
         id: classicState.currentHand.id,
@@ -933,4 +1019,202 @@ function renderClassicComplete() {
 function restartClassic() {
     resetClassicProgress();
     showClassicMode();
+}
+
+// ========== 错题本 / 复习模式 ==========
+
+function showReviewMode() {
+    const book = loadWrongBook();
+    if (book.length === 0) {
+        alert('错题本是空的，继续答题吧！');
+        return;
+    }
+
+    reviewState.questions = book;
+    reviewState.currentIdx = 0;
+    reviewState.score = 0;
+    reviewState.total = book.length;
+
+    document.getElementById('homeApp').style.display = 'none';
+    document.getElementById('reviewApp').style.display = 'block';
+    document.getElementById('reviewContent').style.display = 'block';
+    document.getElementById('reviewResultPage').style.display = 'none';
+    document.getElementById('reviewListPanel').style.display = 'none';
+
+    renderReviewQuestion();
+}
+
+function exitReview() {
+    showHomeMode();
+}
+
+function showReviewList() {
+    document.getElementById('reviewContent').style.display = 'none';
+    document.getElementById('reviewResultPage').style.display = 'none';
+    document.getElementById('reviewListPanel').style.display = 'block';
+    renderReviewList();
+}
+
+function hideReviewList() {
+    document.getElementById('reviewListPanel').style.display = 'none';
+    document.getElementById('reviewContent').style.display = 'block';
+}
+
+function renderReviewList() {
+    const book = loadWrongBook();
+    const container = document.getElementById('reviewListContent');
+
+    if (book.length === 0) {
+        container.innerHTML = '<div class="review-empty">错题本已清空！</div>';
+        return;
+    }
+
+    container.innerHTML = book.map((entry, i) => {
+        const handStr = entry.handCards.map(c => {
+            const { rank, suit } = parseCard(c);
+            const sym = getSuitSymbol(suit);
+            return getRankDisplay(rank) + sym;
+        }).join(' ');
+        const stageName = getStageName(entry.stage);
+        const date = new Date(entry.timestamp).toLocaleDateString('zh-CN');
+
+        return `<div class="review-list-item">
+            <div class="review-item-main">
+                <div class="review-item-hand">${handStr}</div>
+                <div class="review-item-info">${stageName} | ${entry.numPlayers}人 | 正确${entry.correctWinRate}% 你选${entry.playerAnswer}%</div>
+                <div class="review-item-source">${entry.source} · ${date}</div>
+            </div>
+            <button class="review-item-del" onclick="deleteWrongItem(${i})">✕</button>
+        </div>`;
+    }).join('');
+}
+
+function deleteWrongItem(idx) {
+    removeFromWrongBook(idx);
+    renderReviewList();
+    updateHomeStats();
+}
+
+function clearAllWrongItems() {
+    if (confirm('确定清空所有错题吗？')) {
+        clearWrongBook();
+        renderReviewList();
+        updateHomeStats();
+    }
+}
+
+function renderReviewQuestion() {
+    if (reviewState.currentIdx >= reviewState.questions.length) {
+        showReviewResult();
+        return;
+    }
+
+    const entry = reviewState.questions[reviewState.currentIdx];
+
+    // 重建对手数据（补充handType）
+    const opponents = entry.opponents.map(o => ({
+        position: o.position,
+        cards: o.cards,
+        handType: entry.communityCards.length > 0
+            ? HAND_NAMES[evaluateHand([...o.cards, ...entry.communityCards])[0]]
+            : null
+    }));
+
+    // 重新计算胜率（因为保存的可能有精度差异）
+    const oppHands = opponents.map(o => o.cards);
+    const runs = 3, iterPerRun = 20000;
+    let totalRate = 0;
+    for (let r = 0; r < runs; r++) {
+        totalRate += simulateExact(entry.handCards, oppHands, entry.communityCards, iterPerRun);
+    }
+    const correctRate = Math.round(totalRate / runs);
+
+    const optionSpread = 12;
+    const options = generateOptions(correctRate, optionSpread);
+
+    reviewState.handCards = entry.handCards;
+    reviewState.communityCards = entry.communityCards;
+    reviewState.fullCommunity = entry.communityCards;
+    reviewState.stage = entry.stage;
+    reviewState.numPlayers = entry.numPlayers;
+    reviewState.playerPosition = entry.playerPosition;
+    reviewState.opponents = opponents;
+    reviewState.correctWinRate = correctRate;
+    reviewState.options = options;
+    reviewState.answered = false;
+    reviewState.selectedOption = -1;
+    reviewState.source = entry.source;
+
+    // UI
+    document.getElementById('reviewContent').style.display = 'block';
+    document.getElementById('reviewResultPage').style.display = 'none';
+
+    document.getElementById('reviewProgress').textContent = `${reviewState.currentIdx + 1}/${reviewState.total}`;
+    document.getElementById('reviewScoreDisplay').textContent = `${reviewState.score}/${reviewState.currentIdx}`;
+    document.getElementById('reviewSource').textContent = entry.source;
+
+    const pct = (reviewState.currentIdx / reviewState.total) * 100;
+    document.getElementById('reviewProgressFill').style.width = pct + '%';
+
+    renderQuestionUI(reviewState, 'review');
+    document.getElementById('reviewNextBtn').style.display = 'none';
+}
+
+function selectReviewOption(idx) {
+    if (reviewState.answered) return;
+    reviewState.answered = true;
+    reviewState.selectedOption = idx;
+
+    const isCorrect = showAnswerResult(reviewState, idx, 'review');
+
+    if (isCorrect) {
+        reviewState.score++;
+        // 答对了，从错题本中移除这道题
+        const entry = reviewState.questions[reviewState.currentIdx];
+        const book = loadWrongBook();
+        const key = entry.source + entry.handCards.join('');
+        const bookIdx = book.findIndex(b => b.source + b.handCards.join('') === key);
+        if (bookIdx >= 0) {
+            book.splice(bookIdx, 1);
+            saveWrongBook(book);
+        }
+    }
+
+    document.getElementById('reviewNextBtn').style.display = 'block';
+    document.getElementById('reviewNextBtn').textContent =
+        reviewState.currentIdx + 1 >= reviewState.total ? '查看结果' : '下一题 →';
+    document.getElementById('reviewScoreDisplay').textContent = `${reviewState.score}/${reviewState.currentIdx + 1}`;
+}
+
+function nextReviewQuestion() {
+    reviewState.currentIdx++;
+    renderReviewQuestion();
+    document.getElementById('reviewApp').scrollTo(0, 0);
+}
+
+function showReviewResult() {
+    document.getElementById('reviewContent').style.display = 'none';
+    const page = document.getElementById('reviewResultPage');
+    page.style.display = 'block';
+
+    const total = reviewState.total;
+    const accuracy = total > 0 ? Math.round((reviewState.score / total) * 100) : 0;
+    const remaining = loadWrongBook().length;
+
+    page.innerHTML = `
+        <div class="arena-result-container">
+            <div class="arena-result-grade ${accuracy >= 70 ? 'grade-a' : accuracy >= 40 ? 'grade-c' : 'grade-d'}">${accuracy}%</div>
+            <div class="arena-result-title">复习完成！</div>
+            <div class="arena-result-desc">
+                ${reviewState.score}/${total} 题答对，答对的题目已从错题本移除。
+                ${remaining > 0 ? `还剩 ${remaining} 道错题待复习。` : '错题本已清空，太棒了！'}
+            </div>
+            <div class="arena-result-stats">
+                <div class="ch-stat"><div class="ch-stat-num">${reviewState.score}</div><div class="ch-stat-label">答对(已移除)</div></div>
+                <div class="ch-stat"><div class="ch-stat-num">${total - reviewState.score}</div><div class="ch-stat-label">仍需复习</div></div>
+            </div>
+            ${remaining > 0 ? '<button class="ch-restart-btn" onclick="showReviewMode()">继续复习</button>' : ''}
+            <button class="ch-back-btn" onclick="showHomeMode()">返回首页</button>
+        </div>
+    `;
 }

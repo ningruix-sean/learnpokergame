@@ -35,6 +35,12 @@
                 <div class="mode-desc">重现WSOP/WPT/EPT决赛桌经典牌局</div>
                 <div class="mode-tag" id="classicProgressTag">30题</div>
             </div>
+            <div class="home-mode-card review-card" id="wrongBookCard" style="display:none;" onclick="showReviewMode()">
+                <div class="mode-icon">📝</div>
+                <div class="mode-title">错题本</div>
+                <div class="mode-desc">复习做错的题目，答对自动移除</div>
+                <div class="mode-tag" id="wrongBookTag">0题</div>
+            </div>
         </div>
 
         <!-- 历史最佳 -->
@@ -247,6 +253,84 @@
         <div id="classicResultPage" style="display:none;"></div>
     </div>
 
+    <!-- ========== 错题本 / 复习模式 ========== -->
+    <div id="reviewApp" style="display:none;">
+        <header class="header header-review">
+            <button class="header-btn" onclick="exitReview()">← 返回</button>
+            <h1>错题本</h1>
+            <button class="header-btn" onclick="showReviewList()">📋 列表</button>
+        </header>
+
+        <!-- 错题列表面板 -->
+        <div id="reviewListPanel" style="display:none;">
+            <div class="ch-level-select-header">
+                <h3>错题列表</h3>
+                <button class="ch-level-select-close" onclick="hideReviewList()">✕</button>
+            </div>
+            <div id="reviewListContent"></div>
+            <div class="ch-level-select-actions">
+                <button class="ch-restart-btn" onclick="clearAllWrongItems()">清空错题本</button>
+                <button class="ch-back-btn" style="margin-top:8px;" onclick="hideReviewList()">返回复习</button>
+            </div>
+        </div>
+
+        <!-- 复习内容 -->
+        <div id="reviewContent">
+            <div class="ch-info-bar">
+                <div class="ch-info-left">
+                    <span class="ch-level-badge">📝 复习</span>
+                    <span class="review-source-badge" id="reviewSource"></span>
+                </div>
+                <div class="ch-info-right">
+                    得分: <span id="reviewScoreDisplay">0/0</span>
+                </div>
+            </div>
+            <div class="ch-progress">
+                <div class="ch-progress-bar">
+                    <div class="ch-progress-fill review-progress-fill" id="reviewProgressFill"></div>
+                </div>
+                <span class="ch-progress-text" id="reviewProgress">0/0</span>
+            </div>
+
+            <div class="ch-scenario">
+                <div class="ch-scenario-title">判断你的胜率</div>
+                <div class="ch-scenario-info">
+                    <span>阶段: <strong id="reviewStage">翻牌前</strong></span>
+                    <span>玩家: <strong id="reviewPlayers">2 人</strong></span>
+                </div>
+            </div>
+
+            <div class="ch-cards-section">
+                <div class="ch-cards-label">你的手牌 <span class="ch-player-pos" id="reviewPlayerPos"></span></div>
+                <div class="ch-cards-row" id="reviewHandCards"></div>
+            </div>
+
+            <div class="ch-cards-section">
+                <div class="ch-cards-label">公牌</div>
+                <div class="ch-cards-row" id="reviewCommCards"></div>
+                <div class="ch-hand-type" id="reviewHandType"></div>
+            </div>
+
+            <div class="ch-cards-section">
+                <div class="ch-cards-label">对手（答题后翻牌）</div>
+                <div class="ch-opponents" id="reviewOpponents"></div>
+            </div>
+
+            <div class="ch-question">
+                <div class="ch-question-text">你认为当前胜率最接近哪个？</div>
+                <div class="ch-options" id="reviewOptions"></div>
+            </div>
+
+            <div id="reviewResult" style="display:none;"></div>
+
+            <button class="ch-next-btn" id="reviewNextBtn" style="display:none;" onclick="nextReviewQuestion()">
+                下一题 →
+            </button>
+        </div>
+
+        <div id="reviewResultPage" style="display:none;"></div>
+    </div>
+
     <!-- ========== 计算器页面 ========== -->
     <div id="app" style="display:none;">
         <header class="header">
@@ -408,6 +492,10 @@
                 <div class="help-section">
                     <h3>🏆 经典案例</h3>
                     <p>重现WSOP/WPT/EPT决赛桌的经典牌局！每题附带比赛背景介绍，在真实场景中锻炼判断力。</p>
+                </div>
+                <div class="help-section">
+                    <h3>📝 错题本</h3>
+                    <p>做错的题目自动收录，复习时答对自动移除。针对弱点反复练习！</p>
                 </div>
                 <div class="help-section">
                     <h3>🧮 胜率计算器</h3>
