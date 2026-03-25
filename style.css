@@ -1143,6 +1143,17 @@ body {
 .bg-quiz-opt.bg-opt-correct { border-color: var(--green); background: var(--green-light); color: var(--green-dark); }
 .bg-quiz-opt.bg-opt-wrong { border-color: var(--red); background: #ffebee; color: var(--red); }
 
+.bg-quiz-opt-label {
+    display: block;
+    margin-bottom: 6px;
+}
+
+.bg-quiz-opt-cards {
+    display: flex;
+    gap: 3px;
+    flex-wrap: wrap;
+}
+
 .bg-quiz-explain {
     margin-top: 12px;
     padding: 12px;

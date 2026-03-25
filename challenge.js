@@ -1547,7 +1547,12 @@ const BEGINNER_STEPS = [
         lesson: 1, heading: '📝 小测验',
         isQuiz: true,
         question: '德州扑克中，每位玩家拿到几张底牌？',
-        options: ['1张', '2张', '3张', '5张'],
+        options: [
+            { label: '1张', cards: ['Ah'] },
+            { label: '2张', cards: ['Ah','Kh'] },
+            { label: '3张', cards: ['Ah','Kh','Qh'] },
+            { label: '5张', cards: ['Ah','Kh','Qh','Jh','Th'] }
+        ],
         correctIdx: 1,
         explain: '每位玩家拿到2张底牌，加上5张公牌共7张，选出最佳5张组合比大小。'
     },
@@ -1633,7 +1638,12 @@ const BEGINNER_STEPS = [
         lesson: 2, heading: '📝 小测验',
         isQuiz: true,
         question: '以下哪种牌型最大？',
-        options: ['三条（三个K）', '顺子（5-6-7-8-9）', '同花（五张红心）', '两对（AA + KK）'],
+        options: [
+            { label: '三条（三个K）', cards: ['Kh','Kd','Kc','5s','3h'] },
+            { label: '顺子（5-6-7-8-9）', cards: ['5h','6d','7c','8s','9h'] },
+            { label: '同花（五张红心）', cards: ['Ah','9h','7h','4h','2h'] },
+            { label: '两对（AA + KK）', cards: ['Ah','Ad','Kh','Kd','5c'] }
+        ],
         correctIdx: 2,
         explain: '大小排序：两对 < 三条 < 顺子 < 同花。同花比顺子大！这是新手最容易搞错的。'
     }
@@ -1683,9 +1693,13 @@ function renderBeginnerStep() {
                 <div class="bg-section-heading">${step.heading}</div>
                 <div class="bg-quiz-question">${step.question}</div>
                 <div class="bg-quiz-options" id="bgQuizOptions">
-                    ${step.options.map((opt, j) =>
-                        `<button class="bg-quiz-opt" id="bgOpt${j}" onclick="answerBeginnerQuiz(${j})">${opt}</button>`
-                    ).join('')}
+                    ${step.options.map((opt, j) => {
+                        const label = typeof opt === 'string' ? opt : opt.label;
+                        const cardsHtml = (typeof opt === 'object' && opt.cards) ? `<div class="bg-quiz-opt-cards">${bgCards(opt.cards)}</div>` : '';
+                        return `<button class="bg-quiz-opt" id="bgOpt${j}" onclick="answerBeginnerQuiz(${j})">
+                            <span class="bg-quiz-opt-label">${label}</span>${cardsHtml}
+                        </button>`;
+                    }).join('')}
                 </div>
                 <div class="bg-quiz-explain" id="bgQuizExplain" style="display:none;"></div>
             </div>
