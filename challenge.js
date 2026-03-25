@@ -1005,11 +1005,6 @@ function renderClassicQuestion() {
     const pct = (classicState.currentIdx / CLASSIC_HANDS.length) * 100;
     document.getElementById('classicProgressFill').style.width = pct + '%';
 
-    // 比赛信息 — 答题前只显示比赛名称，隐藏详细描述
-    document.getElementById('classicTournament').textContent = hand.tournament;
-    document.getElementById('classicDescription').textContent = '';
-    document.getElementById('classicTournamentInfo').classList.remove('revealed');
-
     // 渲染题目UI
     renderQuestionUI(classicState, 'classic');
     document.getElementById('classicNextBtn').style.display = 'none';
@@ -1023,9 +1018,8 @@ function selectClassicOption(idx) {
     const selected = classicState.options[idx];
     const isCorrect = showAnswerResult(classicState, idx, 'classic');
 
-    // 揭晓比赛描述
-    document.getElementById('classicDescription').textContent = classicState.currentHand.description;
-    document.getElementById('classicTournamentInfo').classList.add('revealed');
+    // 弹出比赛描述浮层
+    showClassicRevealPopup(classicState.currentHand, isCorrect, classicState.correctWinRate);
 
     if (isCorrect) classicState.score++;
     else addToWrongBook(buildWrongEntry(classicState, '经典案例: ' + classicState.currentHand.tournament));
@@ -1039,16 +1033,40 @@ function selectClassicOption(idx) {
 
     classicState.currentIdx++;
     saveClassicProgress();
-
-    document.getElementById('classicNextBtn').style.display = 'block';
-    document.getElementById('classicNextBtn').textContent =
-        classicState.currentIdx >= CLASSIC_HANDS.length ? '查看结果' : '下一题 →';
     document.getElementById('classicScoreDisplay').textContent = `${classicState.score}/${classicState.completed.length}`;
 }
 
+function showClassicRevealPopup(hand, isCorrect, correctRate) {
+    const popup = document.getElementById('classicRevealPopup');
+    const selected = classicState.options[classicState.selectedOption];
+    popup.innerHTML = `
+        <div class="classic-reveal-box">
+            <div class="classic-reveal-result ${isCorrect ? 'reveal-correct' : 'reveal-wrong'}">
+                ${isCorrect ? '✅ 回答正确！' : '❌ 回答错误'} 实际胜率: ${correctRate}%
+                ${!isCorrect ? ' (你选了' + selected.rate + '%)' : ''}
+            </div>
+            <div class="classic-reveal-tournament">${hand.tournament}</div>
+            <div class="classic-reveal-desc">${hand.description}</div>
+            <button class="classic-reveal-btn" onclick="closeClassicReveal()">
+                ${classicState.currentIdx >= CLASSIC_HANDS.length ? '查看结果' : '下一题 →'}
+            </button>
+        </div>
+    `;
+    popup.classList.add('active');
+}
+
+function closeClassicReveal() {
+    document.getElementById('classicRevealPopup').classList.remove('active');
+    if (classicState.currentIdx >= CLASSIC_HANDS.length) {
+        renderClassicComplete();
+    } else {
+        renderClassicQuestion();
+        document.getElementById('classicApp').scrollTo(0, 0);
+    }
+}
+
 function nextClassicQuestion() {
-    renderClassicQuestion();
-    document.getElementById('classicApp').scrollTo(0, 0);
+    closeClassicReveal();
 }
 
 function renderClassicComplete() {

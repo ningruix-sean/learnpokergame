@@ -1111,6 +1111,80 @@ body {
     background: linear-gradient(90deg, #b71c1c, #e53935) !important;
 }
 
+/* Classic Reveal Popup */
+.classic-reveal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 300;
+    justify-content: center;
+    align-items: flex-end;
+}
+
+.classic-reveal-overlay.active {
+    display: flex;
+}
+
+.classic-reveal-box {
+    background: white;
+    border-radius: 20px 20px 0 0;
+    width: 100%;
+    max-width: 480px;
+    padding: 24px 20px 32px;
+    animation: slideUp 0.3s ease-out;
+}
+
+.classic-reveal-result {
+    font-size: 15px;
+    font-weight: 700;
+    padding: 10px 14px;
+    border-radius: 10px;
+    margin-bottom: 16px;
+}
+
+.classic-reveal-result.reveal-correct {
+    background: var(--green-light);
+    color: var(--green-dark);
+}
+
+.classic-reveal-result.reveal-wrong {
+    background: #ffebee;
+    color: var(--red);
+}
+
+.classic-reveal-tournament {
+    font-size: 18px;
+    font-weight: 800;
+    color: #b71c1c;
+    margin-bottom: 8px;
+}
+
+.classic-reveal-desc {
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.7;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.classic-reveal-btn {
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: 12px;
+    background: #b71c1c;
+    color: white;
+    font-size: 17px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.classic-reveal-btn:active {
+    background: #8e0000;
+}
+
 /* ========== Review / Wrong Book Mode ========== */
 
 .review-card {
