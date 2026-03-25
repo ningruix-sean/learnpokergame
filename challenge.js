@@ -1492,18 +1492,21 @@ const BEGINNER_STEPS = [
     },
     {
         lesson: 1, heading: '桌上会翻出5张公牌',
-        body: '桌面上会依次翻出<strong>5张公牌</strong>，所有玩家共用。分3次翻开：',
+        body: '桌面上会依次翻出<strong>5张公牌</strong>，所有玩家共用。分3次翻开，每次翻开后都有一轮下注：',
         cards: () => `<div class="bg-demo">
             <div class="bg-demo-step">
-                <span class="bg-demo-step-tag">翻牌圈</span> 一次翻3张
+                <span class="bg-demo-step-tag">第1次：翻牌圈（Flop）</span>
+                <div class="bg-demo-step-desc">一次性翻出 <strong>3张</strong> 公共牌</div>
                 <div class="bg-demo-cards">${bgCards(['Qh','Jd','3c'])}</div>
             </div>
             <div class="bg-demo-step">
-                <span class="bg-demo-step-tag">转牌圈</span> 再翻1张
+                <span class="bg-demo-step-tag">第2次：转牌圈（Turn）</span>
+                <div class="bg-demo-step-desc">再翻出 <strong>1张</strong> 公共牌（第4张）</div>
                 <div class="bg-demo-cards">${bgCards(['Qh','Jd','3c','Ts'])}</div>
             </div>
             <div class="bg-demo-step">
-                <span class="bg-demo-step-tag">河牌圈</span> 最后1张
+                <span class="bg-demo-step-tag">第3次：河牌圈（River）</span>
+                <div class="bg-demo-step-desc">翻出最后 <strong>1张</strong> 公共牌（第5张）</div>
                 <div class="bg-demo-cards">${bgCards(['Qh','Jd','3c','Ts','2h'])}</div>
             </div>
         </div>`

@@ -977,21 +977,30 @@ body {
 }
 
 .bg-demo-step {
-    margin-bottom: 12px;
+    margin-bottom: 14px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
     font-size: 13px;
     color: var(--text);
 }
+
+.bg-demo-step:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
 
 .bg-demo-step-tag {
     display: inline-block;
     background: #ede7f6;
     color: #4a148c;
     font-weight: 700;
-    font-size: 12px;
-    padding: 2px 8px;
+    font-size: 13px;
+    padding: 3px 10px;
     border-radius: 6px;
-    margin-right: 6px;
     margin-bottom: 6px;
+}
+
+.bg-demo-step-desc {
+    font-size: 14px;
+    color: var(--text);
+    margin: 6px 0;
 }
 
 /* Action cards */
