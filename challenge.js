@@ -1,9 +1,10 @@
-// challenge.js - 闯关模式 + 竞技场模式 + 经典案例模式 + 错题本
+// challenge.js - 闯关模式 + 竞技场模式 + 经典案例模式 + 错题本 + 学习模式
 
 const CHALLENGE_STORAGE_KEY = 'poker_challenge_progress';
 const ARENA_STORAGE_KEY = 'poker_arena_best';
 const CLASSIC_STORAGE_KEY = 'poker_classic_progress';
 const WRONG_BOOK_KEY = 'poker_wrong_book';
+const TUTORIAL_STORAGE_KEY = 'poker_tutorial_progress';
 const TOTAL_LEVELS = 300;
 const ARENA_QUESTIONS = 10;
 
@@ -38,7 +39,16 @@ let classicState = {
     stage: '', numPlayers: 2, playerPosition: '',
     opponents: [], correctWinRate: 0, options: [],
     answered: false, selectedOption: -1,
-    currentHand: null // 当前经典手牌数据
+    currentHand: null
+};
+
+let tutorialState = {
+    currentIdx: 0, score: 0, completed: [],
+    handCards: [], communityCards: [], fullCommunity: [],
+    stage: '', numPlayers: 2, playerPosition: '',
+    opponents: [], correctWinRate: 0, options: [],
+    answered: false, selectedOption: -1,
+    currentLesson: null
 };
 
 // ========== 存储 ==========
@@ -115,6 +125,35 @@ function resetClassicProgress() {
     classicState.score = 0;
     classicState.completed = [];
     saveClassicProgress();
+}
+
+function loadTutorialProgress() {
+    try {
+        const saved = localStorage.getItem(TUTORIAL_STORAGE_KEY);
+        if (saved) {
+            const data = JSON.parse(saved);
+            tutorialState.currentIdx = data.currentIdx || 0;
+            tutorialState.score = data.score || 0;
+            tutorialState.completed = data.completed || [];
+        }
+    } catch (e) { /* ignore */ }
+}
+
+function saveTutorialProgress() {
+    try {
+        localStorage.setItem(TUTORIAL_STORAGE_KEY, JSON.stringify({
+            currentIdx: tutorialState.currentIdx,
+            score: tutorialState.score,
+            completed: tutorialState.completed
+        }));
+    } catch (e) { /* ignore */ }
+}
+
+function resetTutorialProgress() {
+    tutorialState.currentIdx = 0;
+    tutorialState.score = 0;
+    tutorialState.completed = [];
+    saveTutorialProgress();
 }
 
 // ========== 错题本存储 ==========
@@ -435,7 +474,7 @@ function renderQuestionUI(state, prefix) {
     // 选项
     const optContainer = document.getElementById(prefix + 'Options');
     optContainer.innerHTML = state.options.map((opt, idx) => {
-        const fnMap = { arena: 'selectArenaOption', challenge: 'selectChallengeOption', classic: 'selectClassicOption', review: 'selectReviewOption' };
+        const fnMap = { arena: 'selectArenaOption', challenge: 'selectChallengeOption', classic: 'selectClassicOption', review: 'selectReviewOption', tutorial: 'selectTutorialOption' };
         const fn = fnMap[prefix] || 'selectChallengeOption';
         return `<button class="ch-option" id="${prefix}Opt${idx}" onclick="${fn}(${idx})">
             <span class="ch-option-label">选项 ${['A', 'B', 'C', 'D'][idx]}</span>
@@ -506,6 +545,7 @@ function showHomeMode() {
     document.getElementById('arenaApp').style.display = 'none';
     document.getElementById('classicApp').style.display = 'none';
     document.getElementById('reviewApp').style.display = 'none';
+    document.getElementById('tutorialApp').style.display = 'none';
     updateHomeStats();
 }
 
@@ -538,6 +578,17 @@ function updateHomeStats() {
             classicTag.textContent = `${classicState.completed.length}/${CLASSIC_HANDS.length}`;
         } else {
             classicTag.textContent = `${CLASSIC_HANDS.length}题`;
+        }
+    }
+
+    // 教程进度
+    loadTutorialProgress();
+    const tutTag = document.getElementById('tutorialProgressTag');
+    if (tutTag) {
+        if (tutorialState.completed.length >= TUTORIAL_LESSONS.length) {
+            tutTag.textContent = '已完成';
+        } else {
+            tutTag.textContent = `${tutorialState.completed.length}/${TUTORIAL_LESSONS.length}`;
         }
     }
 
@@ -1217,4 +1268,162 @@ function showReviewResult() {
             <button class="ch-back-btn" onclick="showHomeMode()">返回首页</button>
         </div>
     `;
+}
+
+// ========== 学习模式 / 教程 ==========
+
+function showTutorialMode() {
+    document.getElementById('homeApp').style.display = 'none';
+    document.getElementById('tutorialApp').style.display = 'block';
+    document.getElementById('arenaApp').style.display = 'none';
+    document.getElementById('challengeApp').style.display = 'none';
+    document.getElementById('classicApp').style.display = 'none';
+    document.getElementById('reviewApp').style.display = 'none';
+    document.getElementById('app').style.display = 'none';
+    loadTutorialProgress();
+    renderTutorialQuestion();
+}
+
+function exitTutorial() {
+    showHomeMode();
+}
+
+function renderTutorialQuestion() {
+    if (tutorialState.currentIdx >= TUTORIAL_LESSONS.length) {
+        renderTutorialComplete();
+        return;
+    }
+
+    const lesson = TUTORIAL_LESSONS[tutorialState.currentIdx];
+    tutorialState.currentLesson = lesson;
+
+    // 构建对手
+    const opponents = lesson.villains.map(v => ({
+        position: v.position,
+        cards: v.cards,
+        handType: lesson.community.length > 0
+            ? HAND_NAMES[evaluateHand([...v.cards, ...lesson.community])[0]]
+            : null
+    }));
+
+    // 计算胜率
+    const oppHands = opponents.map(o => o.cards);
+    const runs = 3, iterPerRun = 20000;
+    let totalRate = 0;
+    for (let r = 0; r < runs; r++) {
+        totalRate += simulateExact(lesson.heroCards, oppHands, lesson.community, iterPerRun);
+    }
+    const correctRate = Math.round(totalRate / runs);
+
+    const options = generateOptions(correctRate, 14);
+
+    tutorialState.handCards = lesson.heroCards;
+    tutorialState.communityCards = lesson.community;
+    tutorialState.fullCommunity = lesson.community;
+    tutorialState.stage = lesson.stage;
+    tutorialState.numPlayers = lesson.numPlayers;
+    tutorialState.playerPosition = lesson.heroPos;
+    tutorialState.opponents = opponents;
+    tutorialState.correctWinRate = correctRate;
+    tutorialState.options = options;
+    tutorialState.answered = false;
+    tutorialState.selectedOption = -1;
+
+    // UI
+    document.getElementById('tutorialContent').style.display = 'block';
+    document.getElementById('tutorialResultPage').style.display = 'none';
+
+    document.getElementById('tutorialProgress').textContent = `${tutorialState.currentIdx + 1}/${TUTORIAL_LESSONS.length}`;
+    document.getElementById('tutorialScoreDisplay').textContent = `${tutorialState.score}/${tutorialState.completed.length}`;
+
+    const pct = (tutorialState.currentIdx / TUTORIAL_LESSONS.length) * 100;
+    document.getElementById('tutorialProgressFill').style.width = pct + '%';
+
+    // 课程标题和知识点
+    document.getElementById('tutorialLessonTitle').textContent = `第${tutorialState.currentIdx + 1}课：${lesson.title}`;
+    document.getElementById('tutorialKnowledgeTag').textContent = lesson.knowledgePoint;
+
+    // 答题前教学内容
+    document.getElementById('tutorialTeachBefore').textContent = lesson.teachBefore;
+    document.getElementById('tutorialTeachBeforeSection').style.display = 'block';
+
+    // 隐藏答题后解析
+    document.getElementById('tutorialExplainSection').style.display = 'none';
+
+    renderQuestionUI(tutorialState, 'tutorial');
+    document.getElementById('tutorialNextBtn').style.display = 'none';
+}
+
+function selectTutorialOption(idx) {
+    if (tutorialState.answered) return;
+    tutorialState.answered = true;
+    tutorialState.selectedOption = idx;
+
+    const selected = tutorialState.options[idx];
+    const isCorrect = showAnswerResult(tutorialState, idx, 'tutorial');
+
+    if (isCorrect) tutorialState.score++;
+    else addToWrongBook(buildWrongEntry(tutorialState, '教程第' + (tutorialState.currentIdx + 1) + '课'));
+
+    tutorialState.completed.push({
+        id: tutorialState.currentLesson.id,
+        correct: isCorrect
+    });
+
+    tutorialState.currentIdx++;
+    saveTutorialProgress();
+
+    // 显示详细解析
+    const lesson = tutorialState.currentLesson;
+    document.getElementById('tutorialExplainText').textContent = lesson.explainAfter;
+    document.getElementById('tutorialExplainSection').style.display = 'block';
+
+    // 滚动到解析区域
+    setTimeout(() => {
+        document.getElementById('tutorialExplainSection').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+
+    document.getElementById('tutorialNextBtn').style.display = 'block';
+    document.getElementById('tutorialNextBtn').textContent =
+        tutorialState.currentIdx >= TUTORIAL_LESSONS.length ? '查看结果' : '下一课 →';
+    document.getElementById('tutorialScoreDisplay').textContent = `${tutorialState.score}/${tutorialState.completed.length}`;
+}
+
+function nextTutorialQuestion() {
+    renderTutorialQuestion();
+    document.getElementById('tutorialApp').scrollTo(0, 0);
+}
+
+function renderTutorialComplete() {
+    document.getElementById('tutorialContent').style.display = 'none';
+    const page = document.getElementById('tutorialResultPage');
+    page.style.display = 'block';
+
+    const total = tutorialState.completed.length;
+    const accuracy = total > 0 ? Math.round((tutorialState.score / total) * 100) : 0;
+
+    let message;
+    if (accuracy >= 80) message = '你已经掌握了德州扑克的基础知识，可以去竞技场和闯关模式挑战更高难度了！';
+    else if (accuracy >= 50) message = '基础不错！建议回顾答错的题目，巩固知识点后再挑战进阶内容。';
+    else message = '别灰心！德州扑克需要慢慢积累。建议重新学习一遍，重点关注每道题的解析。';
+
+    page.innerHTML = `
+        <div class="arena-result-container">
+            <div class="arena-result-grade ${accuracy >= 70 ? 'grade-a' : accuracy >= 40 ? 'grade-c' : 'grade-d'}">${accuracy}%</div>
+            <div class="arena-result-title">教程完成！</div>
+            <div class="arena-result-desc">${message}</div>
+            <div class="arena-result-stats">
+                <div class="ch-stat"><div class="ch-stat-num">${tutorialState.score}</div><div class="ch-stat-label">答对</div></div>
+                <div class="ch-stat"><div class="ch-stat-num">${total - tutorialState.score}</div><div class="ch-stat-label">答错</div></div>
+                <div class="ch-stat"><div class="ch-stat-num">${accuracy}%</div><div class="ch-stat-label">正确率</div></div>
+            </div>
+            <button class="ch-restart-btn" onclick="restartTutorial()">重新学习</button>
+            <button class="ch-back-btn" onclick="showHomeMode()">返回首页</button>
+        </div>
+    `;
+}
+
+function restartTutorial() {
+    resetTutorialProgress();
+    showTutorialMode();
 }

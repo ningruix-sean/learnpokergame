@@ -881,6 +881,82 @@ body {
     background: #283593;
 }
 
+/* ========== Tutorial Mode ========== */
+
+.tutorial-card {
+    background: linear-gradient(135deg, #00695c, #26a69a);
+    color: white;
+}
+
+.header-tutorial {
+    background: #00695c;
+}
+
+.tutorial-progress-fill {
+    background: linear-gradient(90deg, #00695c, #26a69a) !important;
+}
+
+.tut-knowledge-tag {
+    margin: 10px 16px 0;
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #00695c;
+    background: #e0f2f1;
+    padding: 4px 12px;
+    border-radius: 12px;
+}
+
+.tut-teach-section {
+    margin: 10px 16px;
+    padding: 16px;
+    background: linear-gradient(135deg, #e0f2f1, #b2dfdb);
+    border-radius: 12px;
+    border-left: 4px solid #00695c;
+    box-shadow: var(--shadow);
+}
+
+.tut-teach-label {
+    font-size: 14px;
+    font-weight: 700;
+    color: #00695c;
+    margin-bottom: 8px;
+}
+
+.tut-teach-text {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.7;
+}
+
+.tut-explain-section {
+    margin: 12px 16px;
+    padding: 16px;
+    background: linear-gradient(135deg, #fff8e1, #fff3e0);
+    border-radius: 12px;
+    border-left: 4px solid #ff8f00;
+    box-shadow: var(--shadow);
+    animation: fadeInUp 0.4s ease-out;
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.tut-explain-label {
+    font-size: 14px;
+    font-weight: 700;
+    color: #e65100;
+    margin-bottom: 8px;
+}
+
+.tut-explain-text {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.7;
+}
+
 /* ========== Classic Mode ========== */
 
 .classic-card {

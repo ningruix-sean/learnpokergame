@@ -17,6 +17,12 @@
 
         <!-- 模式选择 -->
         <div class="home-modes">
+            <div class="home-mode-card tutorial-card" onclick="showTutorialMode()">
+                <div class="mode-icon">🎓</div>
+                <div class="mode-title">新手教程</div>
+                <div class="mode-desc">10课基础教学，每题附详细解析</div>
+                <div class="mode-tag" id="tutorialProgressTag">0/10</div>
+            </div>
             <div class="home-mode-card arena-card" onclick="startArena()">
                 <div class="mode-icon">⚔️</div>
                 <div class="mode-title">竞技场</div>
@@ -253,6 +259,86 @@
         <div id="classicResultPage" style="display:none;"></div>
     </div>
 
+    <!-- ========== 学习模式 / 教程 ========== -->
+    <div id="tutorialApp" style="display:none;">
+        <header class="header header-tutorial">
+            <button class="header-btn" onclick="exitTutorial()">← 返回</button>
+            <h1>新手教程</h1>
+            <div class="header-right-info">
+                <span id="tutorialProgress">1/10</span>
+            </div>
+        </header>
+
+        <div id="tutorialContent">
+            <div class="ch-info-bar">
+                <div class="ch-info-left">
+                    <span class="ch-level-badge" id="tutorialLessonTitle">第1课</span>
+                </div>
+                <div class="ch-info-right">
+                    得分: <span id="tutorialScoreDisplay">0/0</span>
+                </div>
+            </div>
+            <div class="ch-progress">
+                <div class="ch-progress-bar">
+                    <div class="ch-progress-fill tutorial-progress-fill" id="tutorialProgressFill"></div>
+                </div>
+            </div>
+
+            <!-- 知识点标签 -->
+            <div class="tut-knowledge-tag" id="tutorialKnowledgeTag"></div>
+
+            <!-- 答题前教学内容 -->
+            <div class="tut-teach-section" id="tutorialTeachBeforeSection">
+                <div class="tut-teach-label">📖 知识点</div>
+                <div class="tut-teach-text" id="tutorialTeachBefore"></div>
+            </div>
+
+            <!-- 场景 -->
+            <div class="ch-scenario">
+                <div class="ch-scenario-title">根据所学知识，判断胜率</div>
+                <div class="ch-scenario-info">
+                    <span>阶段: <strong id="tutorialStage">翻牌前</strong></span>
+                    <span>玩家: <strong id="tutorialPlayers">2 人</strong></span>
+                </div>
+            </div>
+
+            <div class="ch-cards-section">
+                <div class="ch-cards-label">你的手牌 <span class="ch-player-pos" id="tutorialPlayerPos"></span></div>
+                <div class="ch-cards-row" id="tutorialHandCards"></div>
+            </div>
+
+            <div class="ch-cards-section">
+                <div class="ch-cards-label">公牌</div>
+                <div class="ch-cards-row" id="tutorialCommCards"></div>
+                <div class="ch-hand-type" id="tutorialHandType"></div>
+            </div>
+
+            <div class="ch-cards-section">
+                <div class="ch-cards-label">对手（答题后翻牌）</div>
+                <div class="ch-opponents" id="tutorialOpponents"></div>
+            </div>
+
+            <div class="ch-question">
+                <div class="ch-question-text">你认为当前胜率最接近哪个？</div>
+                <div class="ch-options" id="tutorialOptions"></div>
+            </div>
+
+            <div id="tutorialResult" style="display:none;"></div>
+
+            <!-- 答题后详细解析 -->
+            <div class="tut-explain-section" id="tutorialExplainSection" style="display:none;">
+                <div class="tut-explain-label">💡 详细解析</div>
+                <div class="tut-explain-text" id="tutorialExplainText"></div>
+            </div>
+
+            <button class="ch-next-btn" id="tutorialNextBtn" style="display:none;" onclick="nextTutorialQuestion()">
+                下一课 →
+            </button>
+        </div>
+
+        <div id="tutorialResultPage" style="display:none;"></div>
+    </div>
+
     <!-- ========== 错题本 / 复习模式 ========== -->
     <div id="reviewApp" style="display:none;">
         <header class="header header-review">
@@ -482,6 +568,10 @@
             </div>
             <div class="help-body">
                 <div class="help-section">
+                    <h3>🎓 新手教程</h3>
+                    <p>10课基础教学，涵盖起手牌、位置、牌型、听牌等核心概念。每题答后附详细解析，帮你快速入门。</p>
+                </div>
+                <div class="help-section">
                     <h3>⚔️ 竞技场</h3>
                     <p>随机抽取10道不同难度的题目，完成后获得扑克能力评级。可以分享你的成绩到社交媒体！</p>
                 </div>
@@ -519,6 +609,7 @@
 
     <script src="poker.js"></script>
     <script src="classics.js"></script>
+    <script src="tutorial.js"></script>
     <script src="challenge.js"></script>
     <script src="app.js"></script>
 </body>
