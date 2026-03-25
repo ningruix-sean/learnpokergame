@@ -888,15 +888,36 @@ body {
     color: white;
 }
 
-.header-beginner {
-    background: #4a148c;
+.header-beginner { background: #4a148c; }
+
+/* Top bar */
+.bg-topbar {
+    padding: 12px 16px 8px;
 }
 
-.bg-lesson-title {
-    font-size: 20px;
-    font-weight: 800;
-    color: var(--text);
-    padding: 16px 16px 8px;
+.bg-lesson-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #7b1fa2;
+    margin-bottom: 8px;
+}
+
+.bg-step-progress {
+    height: 4px;
+    background: #e0e0e0;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.bg-step-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4a148c, #7b1fa2);
+    border-radius: 2px;
+    transition: width 0.4s;
+}
+
+.bg-page {
+    animation: fadeInUp 0.3s ease-out;
 }
 
 .bg-section {
@@ -908,21 +929,175 @@ body {
 }
 
 .bg-section-heading {
-    font-size: 15px;
-    font-weight: 700;
+    font-size: 18px;
+    font-weight: 800;
     color: #4a148c;
     margin-bottom: 10px;
 }
 
 .bg-section-text {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--text);
     line-height: 1.8;
 }
 
-.bg-section-text p {
-    margin-bottom: 4px;
+/* Demo / illustrations */
+.bg-demo {
+    margin-top: 14px;
 }
+
+.bg-demo-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-light);
+    margin-bottom: 6px;
+}
+
+.bg-demo-cards {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+}
+
+.bg-demo-hint {
+    font-size: 12px;
+    color: var(--text-light);
+    font-style: italic;
+}
+
+.bg-demo-result {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: #e8f5e9;
+    border-radius: 8px;
+    font-size: 14px;
+    color: var(--green-dark);
+    text-align: center;
+}
+
+.bg-demo-step {
+    margin-bottom: 12px;
+    font-size: 13px;
+    color: var(--text);
+}
+
+.bg-demo-step-tag {
+    display: inline-block;
+    background: #ede7f6;
+    color: #4a148c;
+    font-weight: 700;
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    margin-right: 6px;
+    margin-bottom: 6px;
+}
+
+/* Action cards */
+.bg-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.bg-action-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 14px;
+    border-radius: 10px;
+    font-size: 14px;
+    color: white;
+}
+
+.bg-action-item span { font-size: 12px; opacity: 0.85; }
+.bg-action-green { background: #2e7d32; }
+.bg-action-blue { background: #1565c0; }
+.bg-action-red { background: #c62828; }
+.bg-action-gray { background: #546e7a; }
+
+/* Position list */
+.bg-positions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 12px;
+}
+
+.bg-pos-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+}
+
+.bg-pos-badge {
+    display: inline-block;
+    width: 44px;
+    text-align: center;
+    padding: 4px 0;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 800;
+    color: white;
+    flex-shrink: 0;
+}
+
+.bg-pos-best { background: #2e7d32; }
+.bg-pos-ok { background: #1565c0; }
+.bg-pos-mid { background: #f9a825; color: #333; }
+.bg-pos-bad { background: #c62828; }
+
+.bg-pos-name { font-weight: 700; min-width: 36px; }
+.bg-pos-desc { color: var(--text-light); }
+
+/* Hand type illustrations */
+.bg-handtype {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+}
+
+.bg-handtype:last-child { border-bottom: none; }
+
+.bg-ht-rank {
+    font-size: 16px;
+    font-weight: 800;
+    color: #7b1fa2;
+    min-width: 24px;
+}
+
+.bg-ht-info {
+    font-size: 13px;
+    color: var(--text);
+    min-width: 120px;
+    flex-shrink: 0;
+}
+
+.bg-ht-cards {
+    display: flex;
+    gap: 3px;
+    margin-left: auto;
+}
+
+/* Tips */
+.bg-tip {
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.bg-tip-warn { background: #fff3e0; color: #e65100; border-left: 4px solid #ff8f00; }
+.bg-tip-info { background: #e3f2fd; color: #1565c0; border-left: 4px solid #1565c0; }
 
 /* Quiz */
 .bg-quiz-section {

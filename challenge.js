@@ -1467,177 +1467,286 @@ function saveBeginnerProgress(step) {
     try { localStorage.setItem(BEGINNER_STORAGE_KEY, step); } catch (e) { /* ignore */ }
 }
 
-const BEGINNER_PAGES = [
-    // 第1课：规则与流程
+// 每一步一页，用牌面图示辅助讲解
+function bgCards(cards) {
+    return cards.map(c => {
+        const { rank, suit } = parseCard(c);
+        const isRed = suit === 'h' || suit === 'd';
+        return `<div class="ch-card ch-card-sm ${isRed ? 'ch-card-red' : 'ch-card-black'}">
+            <span class="ch-card-rank">${getRankDisplay(rank)}</span>
+            <span class="ch-card-suit">${getSuitSymbol(suit)}</span>
+        </div>`;
+    }).join('');
+}
+
+const BEGINNER_STEPS = [
+    // === 第1课：怎么玩 ===
     {
-        title: '第1课：德州扑克怎么玩？',
-        sections: [
-            {
-                heading: '游戏目标',
-                text: '每位玩家拿到2张底牌（只有自己能看），桌上翻出5张公牌（所有人共用）。用你的2张底牌 + 5张公牌中，选出最佳的5张组合，比谁的牌型更大。牌最大的人赢走底池（所有人下注的筹码）。'
-            },
-            {
-                heading: '游戏流程（4轮下注）',
-                text: '① 翻牌前 — 每人拿到2张底牌，第一轮下注\n② 翻牌圈 — 翻出3张公牌，第二轮下注\n③ 转牌圈 — 翻出第4张公牌，第三轮下注\n④ 河牌圈 — 翻出第5张公牌（最后一张），最后一轮下注\n\n每轮你可以选择：跟注（Call）、加注（Raise）、弃牌（Fold）、过牌（Check）。'
-            },
-            {
-                heading: '牌桌位置',
-                text: '庄家（BTN）— 最有利的位置，最后行动，信息最多\n小盲（SB）— 强制下小注\n大盲（BB）— 强制下大注\n枪口（UTG）— 最早行动，需要最强的牌\n\n越靠后的位置越有优势，因为能看到别人先行动。'
-            },
-            {
-                heading: '小测验',
-                quiz: {
-                    question: '德州扑克中，每位玩家拿到几张底牌？',
-                    options: ['1张', '2张', '3张', '5张'],
-                    correctIdx: 1,
-                    explain: '每位玩家拿到2张只有自己能看到的底牌，再加上5张公共牌，选出最佳5张组合。'
-                }
-            }
-        ]
+        lesson: 1, heading: '你会拿到2张底牌',
+        body: '游戏开始时，每位玩家会拿到<strong>2张底牌</strong>，只有自己能看到。这是你的秘密武器！',
+        cards: () => `<div class="bg-demo">
+            <div class="bg-demo-label">你的底牌</div>
+            <div class="bg-demo-cards">${bgCards(['Ah','Kh'])}</div>
+            <div class="bg-demo-hint">例如：A♥ K♥ — 这是一手很强的起手牌</div>
+        </div>`
     },
-    // 第2课：牌型大小
     {
-        title: '第2课：牌型大小排名',
-        sections: [
-            {
-                heading: '10种牌型（从小到大）',
-                text: '① 高牌 — 什么都没中，比最大的牌（例：A高牌）\n② 一对 — 两张相同的牌（例：两个K）\n③ 两对 — 两组对子（例：KK + 77）\n④ 三条 — 三张相同的牌（例：三个Q）\n⑤ 顺子 — 五张连续的牌（例：5-6-7-8-9）\n⑥ 同花 — 五张相同花色（例：五张红心）\n⑦ 葫芦 — 三条 + 一对（例：QQQ + 88）\n⑧ 四条 — 四张相同的牌（例：四个A）\n⑨ 同花顺 — 同花色的顺子（例：红心5-6-7-8-9）\n⑩ 皇家同花顺 — 同花色的10-J-Q-K-A（最强牌型！）'
-            },
-            {
-                heading: '记忆技巧',
-                text: '从低到高记住关键节点：\n高牌 → 对子 → 两对 → 三条 → 这四个靠"数量"\n顺子 → 同花 → 这两个靠"花色和连续"\n葫芦 → 四条 → 同花顺 → 皇家同花顺 → 最强的组合\n\n常见误区：同花（5张同色）比顺子（5张连续）大！因为同花更难凑成。'
-            },
-            {
-                heading: '花色不分大小',
-                text: '黑桃♠、红心♥、梅花♣、方块♦ 四种花色是平等的，没有谁比谁大。只有在组成同花时花色才有意义（5张要同色）。如果两个人牌型完全一样，则平分底池。'
-            },
-            {
-                heading: '小测验',
-                quiz: {
-                    question: '以下哪种牌型最大？',
-                    options: ['三条（三个K）', '顺子（5-6-7-8-9）', '同花（五张红心）', '两对（AA + KK）'],
-                    correctIdx: 2,
-                    explain: '牌型大小：两对 < 三条 < 顺子 < 同花。同花比顺子大，因为凑成同花的概率更低。记住：同花 > 顺子 > 三条 > 两对。'
-                }
-            }
-        ]
+        lesson: 1, heading: '桌上会翻出5张公牌',
+        body: '桌面上会依次翻出<strong>5张公牌</strong>，所有玩家共用。分3次翻开：',
+        cards: () => `<div class="bg-demo">
+            <div class="bg-demo-step">
+                <span class="bg-demo-step-tag">翻牌圈</span> 一次翻3张
+                <div class="bg-demo-cards">${bgCards(['Qh','Jd','3c'])}</div>
+            </div>
+            <div class="bg-demo-step">
+                <span class="bg-demo-step-tag">转牌圈</span> 再翻1张
+                <div class="bg-demo-cards">${bgCards(['Qh','Jd','3c','Ts'])}</div>
+            </div>
+            <div class="bg-demo-step">
+                <span class="bg-demo-step-tag">河牌圈</span> 最后1张
+                <div class="bg-demo-cards">${bgCards(['Qh','Jd','3c','Ts','2h'])}</div>
+            </div>
+        </div>`
+    },
+    {
+        lesson: 1, heading: '选出最佳5张牌比大小',
+        body: '从你的<strong>2张底牌 + 5张公牌</strong>共7张中，选出最强的5张组合。牌型最大的玩家赢得底池！',
+        cards: () => `<div class="bg-demo">
+            <div class="bg-demo-label">你的底牌</div>
+            <div class="bg-demo-cards">${bgCards(['Ah','Kh'])}</div>
+            <div class="bg-demo-label" style="margin-top:10px;">公牌</div>
+            <div class="bg-demo-cards">${bgCards(['Qh','Jd','3c','Ts','2h'])}</div>
+            <div class="bg-demo-result">最佳组合：A-K-Q-J-10 = <strong>顺子！</strong></div>
+        </div>`
+    },
+    {
+        lesson: 1, heading: '每轮你可以做什么',
+        body: '每次翻牌前后都有一轮下注，你有4种选择：',
+        cards: () => `<div class="bg-actions">
+            <div class="bg-action-item bg-action-green"><strong>跟注 Call</strong><span>跟上别人的下注金额</span></div>
+            <div class="bg-action-item bg-action-blue"><strong>加注 Raise</strong><span>加大下注，给对手压力</span></div>
+            <div class="bg-action-item bg-action-red"><strong>弃牌 Fold</strong><span>放弃这手牌，不亏更多</span></div>
+            <div class="bg-action-item bg-action-gray"><strong>过牌 Check</strong><span>不下注，把机会留给下家</span></div>
+        </div>`
+    },
+    {
+        lesson: 1, heading: '牌桌位置很重要',
+        body: '越<strong>靠后</strong>行动的位置越有优势，因为你能先看别人怎么做：',
+        cards: () => `<div class="bg-positions">
+            <div class="bg-pos-item"><span class="bg-pos-badge bg-pos-best">BTN</span><span class="bg-pos-name">庄家</span><span class="bg-pos-desc">最佳位置，最后行动</span></div>
+            <div class="bg-pos-item"><span class="bg-pos-badge bg-pos-ok">CO</span><span class="bg-pos-name">关煞</span><span class="bg-pos-desc">庄家前一位，也很好</span></div>
+            <div class="bg-pos-item"><span class="bg-pos-badge bg-pos-mid">MP</span><span class="bg-pos-name">中位</span><span class="bg-pos-desc">中等位置</span></div>
+            <div class="bg-pos-item"><span class="bg-pos-badge bg-pos-bad">SB/BB</span><span class="bg-pos-name">盲注</span><span class="bg-pos-desc">强制下注，位置不利</span></div>
+            <div class="bg-pos-item"><span class="bg-pos-badge bg-pos-bad">UTG</span><span class="bg-pos-name">枪口</span><span class="bg-pos-desc">最先行动，需要强牌</span></div>
+        </div>`
+    },
+    {
+        lesson: 1, heading: '📝 小测验',
+        isQuiz: true,
+        question: '德州扑克中，每位玩家拿到几张底牌？',
+        options: ['1张', '2张', '3张', '5张'],
+        correctIdx: 1,
+        explain: '每位玩家拿到2张底牌，加上5张公牌共7张，选出最佳5张组合比大小。'
+    },
+    // === 第2课：牌型大小 ===
+    {
+        lesson: 2, heading: '基础牌型（弱→强）',
+        body: '先认识最常见的4种牌型，从弱到强：',
+        cards: () => `<div class="bg-demo">
+            <div class="bg-handtype">
+                <div class="bg-ht-rank">①</div>
+                <div class="bg-ht-info"><strong>高牌</strong> — 什么都没中</div>
+                <div class="bg-ht-cards">${bgCards(['Ah','Kd','9c','5s','3h'])}</div>
+            </div>
+            <div class="bg-handtype">
+                <div class="bg-ht-rank">②</div>
+                <div class="bg-ht-info"><strong>一对</strong> — 两张相同</div>
+                <div class="bg-ht-cards">${bgCards(['Kh','Kd','9c','5s','3h'])}</div>
+            </div>
+            <div class="bg-handtype">
+                <div class="bg-ht-rank">③</div>
+                <div class="bg-ht-info"><strong>两对</strong> — 两组对子</div>
+                <div class="bg-ht-cards">${bgCards(['Kh','Kd','9c','9s','3h'])}</div>
+            </div>
+            <div class="bg-handtype">
+                <div class="bg-ht-rank">④</div>
+                <div class="bg-ht-info"><strong>三条</strong> — 三张相同</div>
+                <div class="bg-ht-cards">${bgCards(['Kh','Kd','Kc','5s','3h'])}</div>
+            </div>
+        </div>`
+    },
+    {
+        lesson: 2, heading: '进阶牌型（强→更强）',
+        body: '接下来是更强的牌型，出现概率更低：',
+        cards: () => `<div class="bg-demo">
+            <div class="bg-handtype">
+                <div class="bg-ht-rank">⑤</div>
+                <div class="bg-ht-info"><strong>顺子</strong> — 五张连续</div>
+                <div class="bg-ht-cards">${bgCards(['5h','6d','7c','8s','9h'])}</div>
+            </div>
+            <div class="bg-handtype">
+                <div class="bg-ht-rank">⑥</div>
+                <div class="bg-ht-info"><strong>同花</strong> — 五张同色 (比顺子大!)</div>
+                <div class="bg-ht-cards">${bgCards(['Ah','Kh','9h','5h','3h'])}</div>
+            </div>
+            <div class="bg-handtype">
+                <div class="bg-ht-rank">⑦</div>
+                <div class="bg-ht-info"><strong>葫芦</strong> — 三条 + 一对</div>
+                <div class="bg-ht-cards">${bgCards(['Kh','Kd','Kc','9s','9h'])}</div>
+            </div>
+        </div>`
+    },
+    {
+        lesson: 2, heading: '最强牌型（极其稀有）',
+        body: '这三种牌型很难出现，但一旦拿到几乎必赢：',
+        cards: () => `<div class="bg-demo">
+            <div class="bg-handtype">
+                <div class="bg-ht-rank">⑧</div>
+                <div class="bg-ht-info"><strong>四条</strong> — 四张相同</div>
+                <div class="bg-ht-cards">${bgCards(['Ah','Ad','Ac','As','Kh'])}</div>
+            </div>
+            <div class="bg-handtype">
+                <div class="bg-ht-rank">⑨</div>
+                <div class="bg-ht-info"><strong>同花顺</strong> — 同色的顺子</div>
+                <div class="bg-ht-cards">${bgCards(['5h','6h','7h','8h','9h'])}</div>
+            </div>
+            <div class="bg-handtype">
+                <div class="bg-ht-rank">⑩</div>
+                <div class="bg-ht-info"><strong>皇家同花顺</strong> — 最强牌！</div>
+                <div class="bg-ht-cards">${bgCards(['Th','Jh','Qh','Kh','Ah'])}</div>
+            </div>
+        </div>`
+    },
+    {
+        lesson: 2, heading: '容易搞混的地方',
+        body: '新手最常犯的错误：',
+        cards: () => `<div class="bg-demo">
+            <div class="bg-tip bg-tip-warn">同花 > 顺子！同花比顺子大，因为更难凑成。</div>
+            <div class="bg-tip bg-tip-info">花色不分大小！♠♥♣♦ 四种花色是平等的。</div>
+            <div class="bg-tip bg-tip-info">牌型完全一样？平分底池！</div>
+        </div>`
+    },
+    {
+        lesson: 2, heading: '📝 小测验',
+        isQuiz: true,
+        question: '以下哪种牌型最大？',
+        options: ['三条（三个K）', '顺子（5-6-7-8-9）', '同花（五张红心）', '两对（AA + KK）'],
+        correctIdx: 2,
+        explain: '大小排序：两对 < 三条 < 顺子 < 同花。同花比顺子大！这是新手最容易搞错的。'
     }
 ];
 
-let beginnerStep = 0;
-let beginnerSectionIdx = 0;
-let beginnerQuizAnswered = false;
+let bgStepIdx = 0;
+let bgQuizAnswered = false;
 
 function showBeginnerMode() {
     document.getElementById('homeApp').style.display = 'none';
     document.getElementById('beginnerApp').style.display = 'block';
-    beginnerStep = 0;
-    beginnerSectionIdx = 0;
-    beginnerQuizAnswered = false;
-    renderBeginnerPage();
+    bgStepIdx = 0;
+    bgQuizAnswered = false;
+    renderBeginnerStep();
 }
 
 function exitBeginner() {
     showHomeMode();
 }
 
-function renderBeginnerPage() {
-    const page = BEGINNER_PAGES[beginnerStep];
-    if (!page) {
+function renderBeginnerStep() {
+    if (bgStepIdx >= BEGINNER_STEPS.length) {
         renderBeginnerComplete();
         return;
     }
 
-    document.getElementById('beginnerProgress').textContent = `${beginnerStep + 1}/2`;
+    const step = BEGINNER_STEPS[bgStepIdx];
+    const totalSteps = BEGINNER_STEPS.length;
+    const lessonLabel = step.lesson === 1 ? '第1课：德州扑克怎么玩' : '第2课：牌型大小排名';
+
+    document.getElementById('beginnerProgress').textContent = `${bgStepIdx + 1}/${totalSteps}`;
 
     const container = document.getElementById('beginnerContent');
-    let html = `<div class="bg-lesson-title">${page.title}</div>`;
+    let html = '';
 
-    // 渲染所有 section
-    page.sections.forEach((sec, i) => {
-        if (sec.quiz) {
-            // 小测验
-            html += `<div class="bg-section bg-quiz-section" id="bgQuiz">
-                <div class="bg-section-heading">📝 ${sec.heading}</div>
-                <div class="bg-quiz-question">${sec.quiz.question}</div>
+    // 进度条
+    const pct = ((bgStepIdx) / totalSteps) * 100;
+    html += `<div class="bg-topbar">
+        <div class="bg-lesson-label">${lessonLabel}</div>
+        <div class="bg-step-progress"><div class="bg-step-progress-fill" style="width:${pct}%"></div></div>
+    </div>`;
+
+    if (step.isQuiz) {
+        // 测验页
+        html += `<div class="bg-page">
+            <div class="bg-section bg-quiz-section">
+                <div class="bg-section-heading">${step.heading}</div>
+                <div class="bg-quiz-question">${step.question}</div>
                 <div class="bg-quiz-options" id="bgQuizOptions">
-                    ${sec.quiz.options.map((opt, j) =>
+                    ${step.options.map((opt, j) =>
                         `<button class="bg-quiz-opt" id="bgOpt${j}" onclick="answerBeginnerQuiz(${j})">${opt}</button>`
                     ).join('')}
                 </div>
                 <div class="bg-quiz-explain" id="bgQuizExplain" style="display:none;"></div>
-            </div>`;
-        } else {
-            // 普通知识段落
-            const textHtml = sec.text.split('\n').map(line => {
-                if (line.trim() === '') return '<br>';
-                return `<p>${line}</p>`;
-            }).join('');
-            html += `<div class="bg-section">
-                <div class="bg-section-heading">${sec.heading}</div>
-                <div class="bg-section-text">${textHtml}</div>
-            </div>`;
-        }
-    });
-
-    html += `<button class="ch-next-btn bg-next-btn" id="bgNextBtn" style="display:none;" onclick="nextBeginnerPage()">
-        ${beginnerStep + 1 >= BEGINNER_PAGES.length ? '完成学习 🎉' : '下一课 →'}
-    </button>`;
+            </div>
+            <button class="ch-next-btn bg-next-btn" id="bgNextBtn" style="display:none;" onclick="nextBeginnerStep()">
+                ${bgStepIdx + 1 >= totalSteps ? '完成学习 🎉' : '继续 →'}
+            </button>
+        </div>`;
+    } else {
+        // 知识页
+        html += `<div class="bg-page">
+            <div class="bg-section">
+                <div class="bg-section-heading">${step.heading}</div>
+                <div class="bg-section-text">${step.body}</div>
+                ${step.cards ? step.cards() : ''}
+            </div>
+            <button class="ch-next-btn bg-next-btn" onclick="nextBeginnerStep()">继续 →</button>
+        </div>`;
+    }
 
     container.innerHTML = html;
-    beginnerQuizAnswered = false;
+    bgQuizAnswered = false;
 }
 
 function answerBeginnerQuiz(idx) {
-    if (beginnerQuizAnswered) return;
-    beginnerQuizAnswered = true;
+    if (bgQuizAnswered) return;
+    bgQuizAnswered = true;
 
-    const page = BEGINNER_PAGES[beginnerStep];
-    const quizSec = page.sections.find(s => s.quiz);
-    const quiz = quizSec.quiz;
-    const isCorrect = idx === quiz.correctIdx;
+    const step = BEGINNER_STEPS[bgStepIdx];
+    const isCorrect = idx === step.correctIdx;
 
-    // 高亮选项
-    quiz.options.forEach((_, j) => {
+    step.options.forEach((_, j) => {
         const el = document.getElementById('bgOpt' + j);
-        if (j === quiz.correctIdx) el.classList.add('bg-opt-correct');
+        if (j === step.correctIdx) el.classList.add('bg-opt-correct');
         if (j === idx && !isCorrect) el.classList.add('bg-opt-wrong');
         el.disabled = true;
     });
 
-    // 显示解析
     const explainEl = document.getElementById('bgQuizExplain');
     explainEl.style.display = 'block';
     explainEl.innerHTML = `<div class="${isCorrect ? 'bg-explain-correct' : 'bg-explain-wrong'}">
         ${isCorrect ? '✅ 回答正确！' : '❌ 回答错误'}
-    </div>
-    <div class="bg-explain-text">${quiz.explain}</div>`;
+    </div><div class="bg-explain-text">${step.explain}</div>`;
 
-    // 保存进度并显示下一步按钮
-    saveBeginnerProgress(beginnerStep + 1);
+    // 测验完成时保存课程进度
+    saveBeginnerProgress(step.lesson);
     document.getElementById('bgNextBtn').style.display = 'block';
-
     setTimeout(() => {
         document.getElementById('bgNextBtn').scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 300);
 }
 
-function nextBeginnerPage() {
-    beginnerStep++;
-    if (beginnerStep >= BEGINNER_PAGES.length) {
-        renderBeginnerComplete();
-    } else {
-        renderBeginnerPage();
-        document.getElementById('beginnerApp').scrollTo(0, 0);
-    }
+function nextBeginnerStep() {
+    bgStepIdx++;
+    renderBeginnerStep();
+    document.getElementById('beginnerApp').scrollTo(0, 0);
 }
 
 function renderBeginnerComplete() {
+    saveBeginnerProgress(2);
     document.getElementById('beginnerContent').innerHTML = `
         <div class="arena-result-container">
             <div class="arena-result-grade grade-a">🎉</div>
             <div class="arena-result-title">基础学习完成！</div>
-            <div class="arena-result-desc">你已经了解了德州扑克的基本规则和牌型大小。现在可以去"进阶训练"学习实战技巧，或者直接挑战"闯关模式"！</div>
+            <div class="arena-result-desc">你已经了解了德州扑克的基本规则和牌型大小。<br>现在可以去"进阶训练"学习实战技巧！</div>
             <button class="ch-restart-btn" onclick="showTutorialMode()">进入进阶训练</button>
             <button class="ch-back-btn" onclick="showHomeMode()">返回首页</button>
         </div>
