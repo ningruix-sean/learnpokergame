@@ -17,10 +17,16 @@
 
         <!-- 模式选择 -->
         <div class="home-modes">
+            <div class="home-mode-card beginner-card" onclick="showBeginnerMode()">
+                <div class="mode-icon">📚</div>
+                <div class="mode-title">零基础入门</div>
+                <div class="mode-desc">2课学会德州扑克基础规则</div>
+                <div class="mode-tag" id="beginnerProgressTag">0/2</div>
+            </div>
             <div class="home-mode-card tutorial-card" onclick="showTutorialMode()">
                 <div class="mode-icon">🎓</div>
-                <div class="mode-title">新手教程</div>
-                <div class="mode-desc">10课基础教学，每题附详细解析</div>
+                <div class="mode-title">进阶训练</div>
+                <div class="mode-desc">10课实战技巧，每题附详细解析</div>
                 <div class="mode-tag" id="tutorialProgressTag">0/10</div>
             </div>
             <div class="home-mode-card arena-card" onclick="startArena()">
@@ -260,11 +266,24 @@
         <div id="classicResultPage" style="display:none;"></div>
     </div>
 
-    <!-- ========== 学习模式 / 教程 ========== -->
+    <!-- ========== 零基础入门 ========== -->
+    <div id="beginnerApp" style="display:none;">
+        <header class="header header-beginner">
+            <button class="header-btn" onclick="exitBeginner()">← 返回</button>
+            <h1>零基础入门</h1>
+            <div class="header-right-info">
+                <span id="beginnerProgress">1/2</span>
+            </div>
+        </header>
+
+        <div id="beginnerContent"></div>
+    </div>
+
+    <!-- ========== 进阶训练 ========== -->
     <div id="tutorialApp" style="display:none;">
         <header class="header header-tutorial">
             <button class="header-btn" onclick="exitTutorial()">← 返回</button>
-            <h1>新手教程</h1>
+            <h1>进阶训练</h1>
             <div class="header-right-info">
                 <span id="tutorialProgress">1/10</span>
             </div>
@@ -569,8 +588,12 @@
             </div>
             <div class="help-body">
                 <div class="help-section">
-                    <h3>🎓 新手教程</h3>
-                    <p>10课基础教学，涵盖起手牌、位置、牌型、听牌等核心概念。每题答后附详细解析，帮你快速入门。</p>
+                    <h3>📚 零基础入门</h3>
+                    <p>2课图文教学，快速了解德州扑克的基础规则、牌型大小和游戏流程。完全不懂也能看懂！</p>
+                </div>
+                <div class="help-section">
+                    <h3>🎓 进阶训练</h3>
+                    <p>10课实战教学，涵盖起手牌、位置、压制、听牌等核心概念。每题答后附详细解析。</p>
                 </div>
                 <div class="help-section">
                     <h3>⚔️ 竞技场</h3>

@@ -881,6 +881,100 @@ body {
     background: #283593;
 }
 
+/* ========== Beginner Guide ========== */
+
+.beginner-card {
+    background: linear-gradient(135deg, #4a148c, #7b1fa2);
+    color: white;
+}
+
+.header-beginner {
+    background: #4a148c;
+}
+
+.bg-lesson-title {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text);
+    padding: 16px 16px 8px;
+}
+
+.bg-section {
+    margin: 8px 16px;
+    padding: 16px;
+    background: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+}
+
+.bg-section-heading {
+    font-size: 15px;
+    font-weight: 700;
+    color: #4a148c;
+    margin-bottom: 10px;
+}
+
+.bg-section-text {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.8;
+}
+
+.bg-section-text p {
+    margin-bottom: 4px;
+}
+
+/* Quiz */
+.bg-quiz-section {
+    border-left: 4px solid #4a148c;
+    background: #f3e5f5;
+}
+
+.bg-quiz-question {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 12px;
+}
+
+.bg-quiz-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.bg-quiz-opt {
+    padding: 12px 16px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    background: white;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.bg-quiz-opt:active { transform: scale(0.97); }
+.bg-quiz-opt.bg-opt-correct { border-color: var(--green); background: var(--green-light); color: var(--green-dark); }
+.bg-quiz-opt.bg-opt-wrong { border-color: var(--red); background: #ffebee; color: var(--red); }
+
+.bg-quiz-explain {
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: 8px;
+    background: white;
+    animation: fadeInUp 0.3s ease-out;
+}
+
+.bg-explain-correct { font-weight: 700; color: var(--green-dark); margin-bottom: 6px; }
+.bg-explain-wrong { font-weight: 700; color: var(--red); margin-bottom: 6px; }
+.bg-explain-text { font-size: 13px; color: var(--text); line-height: 1.6; }
+
+.bg-next-btn {
+    margin: 16px 16px 32px !important;
+}
+
 /* ========== Tutorial Mode ========== */
 
 .tutorial-card {

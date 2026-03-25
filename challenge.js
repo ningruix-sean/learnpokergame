@@ -1,5 +1,6 @@
 // challenge.js - 闯关模式 + 竞技场模式 + 经典案例模式 + 错题本 + 学习模式
 
+const BEGINNER_STORAGE_KEY = 'poker_beginner_progress';
 const CHALLENGE_STORAGE_KEY = 'poker_challenge_progress';
 const ARENA_STORAGE_KEY = 'poker_arena_best';
 const CLASSIC_STORAGE_KEY = 'poker_classic_progress';
@@ -546,6 +547,7 @@ function showHomeMode() {
     document.getElementById('classicApp').style.display = 'none';
     document.getElementById('reviewApp').style.display = 'none';
     document.getElementById('tutorialApp').style.display = 'none';
+    document.getElementById('beginnerApp').style.display = 'none';
     updateHomeStats();
 }
 
@@ -566,6 +568,13 @@ function showCampaignMode() {
 }
 
 function updateHomeStats() {
+    // 零基础入门进度
+    const beginnerDone = getBeginnerProgress();
+    const beginnerTag = document.getElementById('beginnerProgressTag');
+    if (beginnerTag) {
+        beginnerTag.textContent = beginnerDone >= 2 ? '已完成' : `${beginnerDone}/2`;
+    }
+
     loadChallengeProgress();
     const el = document.getElementById('campaignProgress');
     if (el) el.textContent = `${challengeState.completed.length}/${TOTAL_LEVELS}`;
@@ -1426,4 +1435,193 @@ function renderTutorialComplete() {
 function restartTutorial() {
     resetTutorialProgress();
     showTutorialMode();
+}
+
+// ========== 零基础入门 ==========
+
+function getBeginnerProgress() {
+    try {
+        return parseInt(localStorage.getItem(BEGINNER_STORAGE_KEY)) || 0;
+    } catch (e) { return 0; }
+}
+
+function saveBeginnerProgress(step) {
+    try { localStorage.setItem(BEGINNER_STORAGE_KEY, step); } catch (e) { /* ignore */ }
+}
+
+const BEGINNER_PAGES = [
+    // 第1课：规则与流程
+    {
+        title: '第1课：德州扑克怎么玩？',
+        sections: [
+            {
+                heading: '游戏目标',
+                text: '每位玩家拿到2张底牌（只有自己能看），桌上翻出5张公牌（所有人共用）。用你的2张底牌 + 5张公牌中，选出最佳的5张组合，比谁的牌型更大。牌最大的人赢走底池（所有人下注的筹码）。'
+            },
+            {
+                heading: '游戏流程（4轮下注）',
+                text: '① 翻牌前 — 每人拿到2张底牌，第一轮下注\n② 翻牌圈 — 翻出3张公牌，第二轮下注\n③ 转牌圈 — 翻出第4张公牌，第三轮下注\n④ 河牌圈 — 翻出第5张公牌（最后一张），最后一轮下注\n\n每轮你可以选择：跟注（Call）、加注（Raise）、弃牌（Fold）、过牌（Check）。'
+            },
+            {
+                heading: '牌桌位置',
+                text: '庄家（BTN）— 最有利的位置，最后行动，信息最多\n小盲（SB）— 强制下小注\n大盲（BB）— 强制下大注\n枪口（UTG）— 最早行动，需要最强的牌\n\n越靠后的位置越有优势，因为能看到别人先行动。'
+            },
+            {
+                heading: '小测验',
+                quiz: {
+                    question: '德州扑克中，每位玩家拿到几张底牌？',
+                    options: ['1张', '2张', '3张', '5张'],
+                    correctIdx: 1,
+                    explain: '每位玩家拿到2张只有自己能看到的底牌，再加上5张公共牌，选出最佳5张组合。'
+                }
+            }
+        ]
+    },
+    // 第2课：牌型大小
+    {
+        title: '第2课：牌型大小排名',
+        sections: [
+            {
+                heading: '10种牌型（从小到大）',
+                text: '① 高牌 — 什么都没中，比最大的牌（例：A高牌）\n② 一对 — 两张相同的牌（例：两个K）\n③ 两对 — 两组对子（例：KK + 77）\n④ 三条 — 三张相同的牌（例：三个Q）\n⑤ 顺子 — 五张连续的牌（例：5-6-7-8-9）\n⑥ 同花 — 五张相同花色（例：五张红心）\n⑦ 葫芦 — 三条 + 一对（例：QQQ + 88）\n⑧ 四条 — 四张相同的牌（例：四个A）\n⑨ 同花顺 — 同花色的顺子（例：红心5-6-7-8-9）\n⑩ 皇家同花顺 — 同花色的10-J-Q-K-A（最强牌型！）'
+            },
+            {
+                heading: '记忆技巧',
+                text: '从低到高记住关键节点：\n高牌 → 对子 → 两对 → 三条 → 这四个靠"数量"\n顺子 → 同花 → 这两个靠"花色和连续"\n葫芦 → 四条 → 同花顺 → 皇家同花顺 → 最强的组合\n\n常见误区：同花（5张同色）比顺子（5张连续）大！因为同花更难凑成。'
+            },
+            {
+                heading: '花色不分大小',
+                text: '黑桃♠、红心♥、梅花♣、方块♦ 四种花色是平等的，没有谁比谁大。只有在组成同花时花色才有意义（5张要同色）。如果两个人牌型完全一样，则平分底池。'
+            },
+            {
+                heading: '小测验',
+                quiz: {
+                    question: '以下哪种牌型最大？',
+                    options: ['三条（三个K）', '顺子（5-6-7-8-9）', '同花（五张红心）', '两对（AA + KK）'],
+                    correctIdx: 2,
+                    explain: '牌型大小：两对 < 三条 < 顺子 < 同花。同花比顺子大，因为凑成同花的概率更低。记住：同花 > 顺子 > 三条 > 两对。'
+                }
+            }
+        ]
+    }
+];
+
+let beginnerStep = 0;
+let beginnerSectionIdx = 0;
+let beginnerQuizAnswered = false;
+
+function showBeginnerMode() {
+    document.getElementById('homeApp').style.display = 'none';
+    document.getElementById('beginnerApp').style.display = 'block';
+    beginnerStep = 0;
+    beginnerSectionIdx = 0;
+    beginnerQuizAnswered = false;
+    renderBeginnerPage();
+}
+
+function exitBeginner() {
+    showHomeMode();
+}
+
+function renderBeginnerPage() {
+    const page = BEGINNER_PAGES[beginnerStep];
+    if (!page) {
+        renderBeginnerComplete();
+        return;
+    }
+
+    document.getElementById('beginnerProgress').textContent = `${beginnerStep + 1}/2`;
+
+    const container = document.getElementById('beginnerContent');
+    let html = `<div class="bg-lesson-title">${page.title}</div>`;
+
+    // 渲染所有 section
+    page.sections.forEach((sec, i) => {
+        if (sec.quiz) {
+            // 小测验
+            html += `<div class="bg-section bg-quiz-section" id="bgQuiz">
+                <div class="bg-section-heading">📝 ${sec.heading}</div>
+                <div class="bg-quiz-question">${sec.quiz.question}</div>
+                <div class="bg-quiz-options" id="bgQuizOptions">
+                    ${sec.quiz.options.map((opt, j) =>
+                        `<button class="bg-quiz-opt" id="bgOpt${j}" onclick="answerBeginnerQuiz(${j})">${opt}</button>`
+                    ).join('')}
+                </div>
+                <div class="bg-quiz-explain" id="bgQuizExplain" style="display:none;"></div>
+            </div>`;
+        } else {
+            // 普通知识段落
+            const textHtml = sec.text.split('\n').map(line => {
+                if (line.trim() === '') return '<br>';
+                return `<p>${line}</p>`;
+            }).join('');
+            html += `<div class="bg-section">
+                <div class="bg-section-heading">${sec.heading}</div>
+                <div class="bg-section-text">${textHtml}</div>
+            </div>`;
+        }
+    });
+
+    html += `<button class="ch-next-btn bg-next-btn" id="bgNextBtn" style="display:none;" onclick="nextBeginnerPage()">
+        ${beginnerStep + 1 >= BEGINNER_PAGES.length ? '完成学习 🎉' : '下一课 →'}
+    </button>`;
+
+    container.innerHTML = html;
+    beginnerQuizAnswered = false;
+}
+
+function answerBeginnerQuiz(idx) {
+    if (beginnerQuizAnswered) return;
+    beginnerQuizAnswered = true;
+
+    const page = BEGINNER_PAGES[beginnerStep];
+    const quizSec = page.sections.find(s => s.quiz);
+    const quiz = quizSec.quiz;
+    const isCorrect = idx === quiz.correctIdx;
+
+    // 高亮选项
+    quiz.options.forEach((_, j) => {
+        const el = document.getElementById('bgOpt' + j);
+        if (j === quiz.correctIdx) el.classList.add('bg-opt-correct');
+        if (j === idx && !isCorrect) el.classList.add('bg-opt-wrong');
+        el.disabled = true;
+    });
+
+    // 显示解析
+    const explainEl = document.getElementById('bgQuizExplain');
+    explainEl.style.display = 'block';
+    explainEl.innerHTML = `<div class="${isCorrect ? 'bg-explain-correct' : 'bg-explain-wrong'}">
+        ${isCorrect ? '✅ 回答正确！' : '❌ 回答错误'}
+    </div>
+    <div class="bg-explain-text">${quiz.explain}</div>`;
+
+    // 保存进度并显示下一步按钮
+    saveBeginnerProgress(beginnerStep + 1);
+    document.getElementById('bgNextBtn').style.display = 'block';
+
+    setTimeout(() => {
+        document.getElementById('bgNextBtn').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+}
+
+function nextBeginnerPage() {
+    beginnerStep++;
+    if (beginnerStep >= BEGINNER_PAGES.length) {
+        renderBeginnerComplete();
+    } else {
+        renderBeginnerPage();
+        document.getElementById('beginnerApp').scrollTo(0, 0);
+    }
+}
+
+function renderBeginnerComplete() {
+    document.getElementById('beginnerContent').innerHTML = `
+        <div class="arena-result-container">
+            <div class="arena-result-grade grade-a">🎉</div>
+            <div class="arena-result-title">基础学习完成！</div>
+            <div class="arena-result-desc">你已经了解了德州扑克的基本规则和牌型大小。现在可以去"进阶训练"学习实战技巧，或者直接挑战"闯关模式"！</div>
+            <button class="ch-restart-btn" onclick="showTutorialMode()">进入进阶训练</button>
+            <button class="ch-back-btn" onclick="showHomeMode()">返回首页</button>
+        </div>
+    `;
 }
