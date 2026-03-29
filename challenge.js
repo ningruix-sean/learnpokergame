@@ -428,11 +428,13 @@ function getStageName(stage) {
 
 // ========== UI 工具 ==========
 
-function cardHTML(card, small) {
+function cardHTML(card, small, dealDelay) {
     const { rank, suit } = parseCard(card);
     const isRed = suit === 'h' || suit === 'd';
     const cls = small ? 'ch-card ch-card-sm' : 'ch-card';
-    return `<div class="${cls} ${isRed ? 'ch-card-red' : 'ch-card-black'}">
+    const delay = dealDelay !== undefined ? `style="animation-delay:${dealDelay}s"` : '';
+    const animCls = dealDelay !== undefined ? ' card-deal' : '';
+    return `<div class="${cls}${animCls} ${isRed ? 'ch-card-red' : 'ch-card-black'}" ${delay}>
         <span class="ch-card-rank">${getRankDisplay(rank)}</span>
         <span class="ch-card-suit">${getSuitSymbol(suit)}</span>
     </div>`;
@@ -442,21 +444,38 @@ function cardBackHTML() {
     return `<div class="ch-card ch-card-sm ch-card-back"><span class="ch-card-back-icon">?</span></div>`;
 }
 
+// 带翻转动画的牌（牌背→正面）
+function cardFlipHTML(card, small) {
+    const { rank, suit } = parseCard(card);
+    const isRed = suit === 'h' || suit === 'd';
+    const sizeCls = small ? ' ch-card-sm' : '';
+    return `<div class="card-flip-container${sizeCls}">
+        <div class="card-flip-inner card-do-flip">
+            <div class="card-flip-back ch-card${sizeCls} ch-card-back"><span class="ch-card-back-icon">?</span></div>
+            <div class="card-flip-front ch-card${sizeCls} ${isRed ? 'ch-card-red' : 'ch-card-black'}">
+                <span class="ch-card-rank">${getRankDisplay(rank)}</span>
+                <span class="ch-card-suit">${getSuitSymbol(suit)}</span>
+            </div>
+        </div>
+    </div>`;
+}
+
 function renderQuestionUI(state, prefix) {
     document.getElementById(prefix + 'Stage').textContent = getStageName(state.stage);
     document.getElementById(prefix + 'Players').textContent = state.numPlayers + ' 人';
 
-    // 手牌
-    document.getElementById(prefix + 'HandCards').innerHTML = state.handCards.map(c => cardHTML(c, false)).join('');
+    // 手牌（带发牌动画）
+    document.getElementById(prefix + 'HandCards').innerHTML =
+        state.handCards.map((c, i) => cardHTML(c, false, 0.1 + i * 0.15)).join('');
     document.getElementById(prefix + 'PlayerPos').textContent =
         state.playerPosition + ' (' + POSITION_FULL_NAMES[state.playerPosition] + ')';
 
-    // 公牌
+    // 公牌（带发牌动画，延迟在手牌之后）
     const commEl = document.getElementById(prefix + 'CommCards');
     if (state.communityCards.length === 0) {
         commEl.innerHTML = '<div class="ch-no-comm">无公牌（翻牌前）</div>';
     } else {
-        commEl.innerHTML = state.communityCards.map(c => cardHTML(c, false)).join('');
+        commEl.innerHTML = state.communityCards.map((c, i) => cardHTML(c, false, 0.4 + i * 0.12)).join('');
     }
 
     // 当前牌型
@@ -511,23 +530,32 @@ function showAnswerResult(state, idx, prefix) {
 
     state.options.forEach((opt, i) => {
         const el = document.getElementById(prefix + 'Opt' + i);
-        if (opt.isCorrect) el.classList.add('ch-option-correct');
-        if (i === idx && !isCorrect) el.classList.add('ch-option-wrong');
+        if (opt.isCorrect) {
+            el.classList.add('ch-option-correct');
+            el.classList.add('anim-bounce');
+        }
+        if (i === idx && !isCorrect) {
+            el.classList.add('ch-option-wrong');
+            el.classList.add('anim-shake');
+        }
         el.disabled = true;
     });
 
-    renderOpponentsUI(state.opponents, true, prefix + 'Opponents');
+    // 对手翻牌（带翻转动画）
+    renderOpponentsFlip(state.opponents, prefix + 'Opponents');
 
     const resultEl = document.getElementById(prefix + 'Result');
     resultEl.style.display = 'block';
     if (isCorrect) {
-        resultEl.innerHTML = `<div class="ch-result-correct">
+        resultEl.innerHTML = `<div class="ch-result-correct anim-pop">
             <div class="ch-result-icon">&#10004;</div>
             <div class="ch-result-text">回答正确！</div>
             <div class="ch-result-detail">实际胜率: ${state.correctWinRate}%</div>
         </div>`;
+        // 纸屑效果
+        spawnConfetti(resultEl);
     } else {
-        resultEl.innerHTML = `<div class="ch-result-wrong">
+        resultEl.innerHTML = `<div class="ch-result-wrong anim-pop">
             <div class="ch-result-icon">&#10008;</div>
             <div class="ch-result-text">回答错误</div>
             <div class="ch-result-detail">你选了 ${selected.rate}%，实际胜率: ${state.correctWinRate}%</div>
@@ -535,6 +563,44 @@ function showAnswerResult(state, idx, prefix) {
     }
 
     return isCorrect;
+}
+
+// 对手翻牌动画
+function renderOpponentsFlip(opponents, containerId) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = opponents.map((opp, i) => {
+        const posName = POSITION_FULL_NAMES[opp.position] || opp.position;
+        const cardsHtml = opp.cards.map((c, j) => {
+            const flipCard = cardFlipHTML(c, true);
+            return `<div style="animation-delay:${i * 0.2 + j * 0.15}s" class="flip-delay">${flipCard}</div>`;
+        }).join('');
+        const typeHtml = opp.handType ? `<span class="ch-opp-handtype">${opp.handType}</span>` : '';
+        return `<div class="ch-opponent">
+            <div class="ch-opp-pos">${opp.position} <span class="ch-opp-pos-name">${posName}</span></div>
+            <div class="ch-opp-cards">${cardsHtml}</div>
+            ${typeHtml}
+        </div>`;
+    }).join('');
+}
+
+// 纸屑粒子效果
+function spawnConfetti(parentEl) {
+    const colors = ['#4caf50', '#ffd700', '#2196f3', '#ff5722', '#e91e63', '#00bcd4'];
+    const container = document.createElement('div');
+    container.className = 'confetti-container';
+    for (let i = 0; i < 30; i++) {
+        const p = document.createElement('div');
+        p.className = 'confetti-piece';
+        p.style.left = Math.random() * 100 + '%';
+        p.style.background = colors[Math.floor(Math.random() * colors.length)];
+        p.style.animationDelay = Math.random() * 0.5 + 's';
+        p.style.animationDuration = (1 + Math.random() * 1.5) + 's';
+        container.appendChild(p);
+    }
+    parentEl.style.position = 'relative';
+    parentEl.style.overflow = 'hidden';
+    parentEl.appendChild(container);
+    setTimeout(() => container.remove(), 3000);
 }
 
 // ========== 页面导航 ==========
